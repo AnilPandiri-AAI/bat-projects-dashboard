@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BAT Projects Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<style>
+  *,*::before,*::after{box-sizing:border-box;}
+  body{margin:0;background:#f6f8fb;}
+  @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  input:focus,select:focus,button:focus{outline:2px solid #4778a8;outline-offset:1px}
+  ::-webkit-scrollbar{width:4px;height:4px}
+  ::-webkit-scrollbar-thumb{background:#c4cdd6;border-radius:2px}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const e = React.createElement;
+
+class BATDashboard extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      filterType:'All', expandedProject:null,
+      showManage:false, manageTab:'hours',
+      entryMember:'Sweta',
+      weeklyLog:{}, members:null, projects:null,
+      hourEntries:{},
+      newProject:{name:'',owner:'Sweta',type:'Transform',status:'Implementation'},
+      newMember:{name:'',capacity:40},
+    };
+  }
+
+  NAVY='#1b2d44'; BLUE='#4778a8'; GREEN='#2ea86a'; AMBER='#d98f28'; RED='#c73a3a'; GRAY='#9aaabb';
+  TC={Transform:'#4778a8',Grow:'#2ea86a',Run:'#d98f28',Agent:'#7055c0'};
+  SS={Completed:{dot:'#2ea86a',color:'#2ea86a'},Implementation:{dot:'#4778a8',color:'#4778a8'},Support:{dot:'#4778a8',color:'#4778a8'},Assessment:{dot:'#9aaabb',color:'#9aaabb'},'On Hold':{dot:'#d98f28',color:'#d98f28'}};
+
+  DEFAULT_MEMBERS=['Sweta','Jonny','Anil','Saurabh','Vinay'];
+  DEFAULT_PROJECTS=[
+    {name:'Aisera PMI Project',owner:'Sweta',type:'Transform',status:'Completed',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'AP Advance Matching',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[2,0,2,0,2,4,4,3],planned4w:[4,4,5.2,6],forecast:[3.6,2,2]},
+    {name:'Bank Integrations',owner:'Anil',type:'Transform',status:'Implementation',actual8w:[0,0,0,0,0,4,4,0],planned4w:[4,4,4,4],forecast:[4,4,4]},
+    {name:'India Functions',owner:'Saurabh',type:'Run',status:'Implementation',actual8w:[0,3,3,2,0,3,3,0],planned4w:[3,3,3,3],forecast:[1.2,0,0]},
+    {name:'Fixed Assets / Inventory',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,10,12,0],planned4w:[10,10,10,10],forecast:[8.8,8,8]},
+    {name:'Concur Integration',owner:'Anil',type:'Grow',status:'Support',actual8w:[2,2,2,2,2,2,2,2],planned4w:[2,2,2,2],forecast:[0.8,0,0]},
+    {name:'Dunning Letters',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,1,2,0],planned4w:[1,1,0.8,1],forecast:[0.2,0,0]},
+    {name:'Blackline Re-Implementation',owner:'Sweta',type:'Grow',status:'Implementation',actual8w:[10,10,12.5,10,10,10,10,5],planned4w:[10,10,10,10],forecast:[7,5,5]},
+    {name:'Workday HRMS RFP',owner:'Vinay',type:'Grow',status:'Assessment',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'Columbia ERP Implementation',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[0,0,2,0,1,0,1,1],planned4w:[2,2,2,2],forecast:[2,2,2]},
+    {name:'Recon Agent',owner:'Sweta',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,2,0],planned4w:[1,1,1,1],forecast:[1,1,1]},
+    {name:'ASF P2P Solution',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,3,0],planned4w:[1,1,1,0],forecast:[0.6,1,1]},
+    {name:'AP PO UK (A360)',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,0,0,0,0,1,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'Cash Auto Application',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[5,0,0,0,2,2,2,2],planned4w:[2,2,2,2],forecast:[2,2,2]},
+    {name:'Payment Buddy',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[4,0,4,0,4,4,2,2],planned4w:[2,2,6,7],forecast:[7,7,5.8]},
+    {name:'Adopt Use Cases',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[0,5,5,5,5,5,1,0],planned4w:[5,5,5,5],forecast:[2.6,1,1]},
+    {name:'Transform Flux Reports 2.0',owner:'Jonny',type:'Transform',status:'On Hold',actual8w:[5,0,8,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'FPNA - Process & Agent',owner:'Sweta',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'SAP - Columbia Impl.',owner:'Sweta',type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
+    {name:'Workday Data Scramble',owner:'Anil',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0]},
+    {name:'Cash Auto App (Anil)',owner:'Anil',type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3]},
+  ];
+  OWNER_TOTALS={
+    Sweta:{planned:[36,36,36,36],actual:[36,40,41,0]},
+    Jonny:{planned:[33,33,38.2,40],actual:[28,31,29,0]},
+    Anil:{planned:[40,40,40,40],actual:[40,43,43,0]},
+    Saurabh:{planned:[38,38,37.8,37],actual:[38,30,0,0]},
+    Vinay:{planned:[4,4,4,4],actual:[0,0,0,0]},
+  };
+
+  componentDidMount(){
+    try{
+      const d=JSON.parse(localStorage.getItem('bat_v1')||'{}');
+      const p={};
+      if(d.weeklyLog)p.weeklyLog=d.weeklyLog;
+      if(d.members)p.members=d.members;
+      if(d.projects)p.projects=d.projects;
+      if(Object.keys(p).length)this.setState(p);
+    }catch(e){}
+  }
+
+  persist(patch){
+    const n={...this.state,...patch};
+    try{localStorage.setItem('bat_v1',JSON.stringify({weeklyLog:n.weeklyLog,members:n.members,projects:n.projects}));}catch(e){}
+    this.setState(patch);
+  }
+
+  getMembers(){return this.state.members||this.DEFAULT_MEMBERS;}
+  getProjects(){
+    const base=this.state.projects||this.DEFAULT_PROJECTS;
+    const{weeklyLog}=this.state;
+    return base.map(p=>{
+      const log=weeklyLog[p.name];
+      if(!log)return p;
+      return{...p,
+        planned4w:[...p.planned4w.slice(0,3),log.planned!=null?log.planned:p.planned4w[3]],
+        actual8w:[...p.actual8w.slice(0,7),log.actual!=null?log.actual:p.actual8w[7]],
+      };
+    });
+  }
+  filtered(){const ft=this.state.filterType,ps=this.getProjects();return ft==='All'?ps:ps.filter(p=>p.type===ft);}
+  vc(v){if(v===null||v===undefined)return this.GRAY;return v>=0?this.GREEN:Math.abs(v)<=2?this.AMBER:this.RED;}
+
+  buildManageBtn(){
+    return e('button',{
+      onClick:()=>{
+        const entries={};
+        this.getProjects().forEach(p=>{
+          const log=this.state.weeklyLog[p.name];
+          entries[p.name]={planned:log?.planned??p.planned4w[3],actual:log?.actual??''};
+        });
+        this.setState({showManage:true,manageTab:'hours',hourEntries:entries});
+      },
+      style:{padding:'7px 16px',borderRadius:7,border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.9)',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}
+    },'Manage');
+  }
+
+  buildManagePanel(){
+    if(!this.state.showManage)return null;
+    const{manageTab}=this.state;
+    const tabs=[['hours','Log Hours'],['projects','Projects'],['team','Team']];
+    const content=manageTab==='hours'?this.buildHoursTab():manageTab==='projects'?this.buildProjectsTab():this.buildTeamTab();
+    return e('div',{style:{position:'fixed',inset:0,background:'rgba(10,20,35,0.72)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflowY:'auto',animation:'fadeIn 0.15s ease-out'}},
+      e('div',{style:{background:'#fff',borderRadius:12,width:'100%',maxWidth:680,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 24px',borderBottom:'1px solid #e4e9ef',flexShrink:0}},
+          e('span',{style:{fontSize:15,fontWeight:600,color:this.NAVY}},'Manage'),
+          e('button',{onClick:()=>this.setState({showManage:false}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit'}},'×')
+        ),
+        e('div',{style:{display:'flex',borderBottom:'1px solid #e4e9ef',padding:'0 24px',flexShrink:0}},
+          ...tabs.map(([id,label])=>e('button',{key:id,onClick:()=>this.setState({manageTab:id}),style:{padding:'11px 16px',border:'none',borderBottom:`2px solid ${manageTab===id?this.BLUE:'transparent'}`,background:'transparent',color:manageTab===id?this.BLUE:'#6b7d94',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',marginBottom:-1}},label))
+        ),
+        e('div',{style:{flex:1,overflowY:'auto',padding:'24px'}},content)
+      )
+    );
+  }
+
+  buildHoursTab(){
+    const{entryMember,hourEntries}=this.state;
+    const members=this.getMembers();
+    const ps=this.getProjects().filter(p=>p.owner===entryMember&&p.status!=='Completed'&&p.status!=='On Hold');
+    const iS={width:72,padding:'6px 10px',border:'1px solid #dde4eb',borderRadius:7,fontSize:13,textAlign:'right',fontFamily:'inherit',background:'#fff',color:this.NAVY};
+    return e('div',null,
+      e('div',{style:{marginBottom:16}},
+        e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8}},'Select member'),
+        e('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+          ...members.map(m=>e('button',{key:m,onClick:()=>{
+            const ent={};
+            this.getProjects().filter(p=>p.owner===m).forEach(p=>{const log=this.state.weeklyLog[p.name];ent[p.name]={planned:log?.planned??p.planned4w[3],actual:log?.actual??''};});
+            this.setState({entryMember:m,hourEntries:ent});
+          },style:{padding:'5px 14px',borderRadius:9999,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${entryMember===m?this.BLUE:'#dde4eb'}`,background:entryMember===m?this.BLUE:'#fff',color:entryMember===m?'#fff':'#6b7d94'}},m))
+        )
+      ),
+      e('div',{style:{background:'#f6f8fb',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:this.GRAY}},
+        'Current week: Jun 22–26, 2026 · Enter hours for each project below'
+      ),
+      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
+        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
+          ...['Project','Planned (h)','Actual (h)'].map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',textAlign:h==='Project'?'left':'right'}},h))
+        )),
+        e('tbody',null,...(ps.length?ps.map(p=>{
+          const ent=hourEntries[p.name]||{planned:p.planned4w[3],actual:''};
+          const upd=(field,val)=>this.setState(s=>({hourEntries:{...s.hourEntries,[p.name]:{...s.hourEntries[p.name]||{},[field]:val}}}));
+          return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
+            e('td',{style:{padding:'10px 0',fontSize:13,color:this.NAVY}},
+              e('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                e('div',{style:{width:3,height:16,borderRadius:2,background:this.TC[p.type],flexShrink:0}}),
+                p.name
+              )
+            ),
+            e('td',{style:{padding:'10px 8px',textAlign:'right'}},
+              e('input',{type:'number',value:ent.planned??'',min:0,step:0.5,onChange:ev=>upd('planned',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:iS})
+            ),
+            e('td',{style:{padding:'10px 0',textAlign:'right'}},
+              e('input',{type:'number',value:ent.actual??'',min:0,step:0.5,placeholder:'—',onChange:ev=>upd('actual',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:{...iS,borderColor:this.BLUE,background:'#f4f8ff'}})
+            )
+          );
+        }):[e('tr',{key:'empty'},e('td',{colSpan:3,style:{padding:'24px 0',textAlign:'center',color:this.GRAY,fontSize:14}},'No active projects for this member'))]))
+      ),
+      e('div',{style:{marginTop:20,display:'flex',justifyContent:'flex-end',gap:10}},
+        e('button',{onClick:()=>this.setState({showManage:false}),style:{padding:'8px 16px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
+        e('button',{onClick:()=>{
+          const newLog={...this.state.weeklyLog};
+          Object.entries(this.state.hourEntries).forEach(([name,v])=>{if(v.planned!==''||v.actual!=='')newLog[name]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};});
+          this.persist({weeklyLog:newLog,showManage:false});
+        },style:{padding:'8px 20px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'Save & update dashboard')
+      )
+    );
+  }
+
+  buildProjectsTab(){
+    const{newProject}=this.state;
+    const members=this.getMembers(),projects=this.getProjects();
+    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff',width:'100%'};
+    const setNP=patch=>this.setState({newProject:{...newProject,...patch}});
+    return e('div',null,
+      e('div',{style:{background:'#f6f8fb',borderRadius:10,padding:'16px',marginBottom:20}},
+        e('div',{style:{fontSize:12,color:this.GRAY,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}},'Add new project'),
+        e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}},
+          e('input',{type:'text',placeholder:'Project name',value:newProject.name,onChange:ev=>setNP({name:ev.target.value}),style:{...iS,gridColumn:'1/-1'}}),
+          e('select',{value:newProject.owner,onChange:ev=>setNP({owner:ev.target.value}),style:iS},...members.map(m=>e('option',{key:m,value:m},m))),
+          e('select',{value:newProject.type,onChange:ev=>setNP({type:ev.target.value}),style:iS},...['Transform','Grow','Run','Agent'].map(t=>e('option',{key:t,value:t},t))),
+          e('select',{value:newProject.status,onChange:ev=>setNP({status:ev.target.value}),style:iS},...['Implementation','Assessment','Support','On Hold','Completed'].map(s=>e('option',{key:s,value:s},s)))
+        ),
+        e('button',{onClick:()=>{
+          if(!newProject.name.trim())return;
+          const np={name:newProject.name.trim(),owner:newProject.owner,type:newProject.type,status:newProject.status,actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]};
+          this.persist({projects:[...this.getProjects(),np],newProject:{name:'',owner:'Sweta',type:'Transform',status:'Implementation'}});
+        },style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add project')
+      ),
+      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
+        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
+          ...['Project','Owner','Type',''].map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
+        )),
+        e('tbody',null,...projects.map(p=>e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
+          e('td',{style:{padding:'11px 0',fontSize:13,color:this.NAVY}},
+            e('div',{style:{display:'flex',alignItems:'center',gap:6}},
+              e('div',{style:{width:3,height:16,borderRadius:2,background:this.TC[p.type],flexShrink:0}}),p.name
+            )
+          ),
+          e('td',{style:{padding:'11px 8px',fontSize:12,color:this.GRAY}},p.owner),
+          e('td',{style:{padding:'11px 8px'}},e('span',{style:{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:4,color:this.TC[p.type],background:`${this.TC[p.type]}18`}},p.type)),
+          e('td',{style:{padding:'11px 0',textAlign:'right'}},
+            e('button',{onClick:()=>this.persist({projects:this.getProjects().filter(x=>x.name!==p.name)}),style:{padding:'4px 10px',border:'1px solid #e4e9ef',borderRadius:6,background:'#fff',color:this.GRAY,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Remove')
+          )
+        )))
+      )
+    );
+  }
+
+  buildTeamTab(){
+    const{newMember}=this.state,members=this.getMembers();
+    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff'};
+    return e('div',null,
+      e('div',{style:{background:'#f6f8fb',borderRadius:10,padding:'16px',marginBottom:20}},
+        e('div',{style:{fontSize:12,color:this.GRAY,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}},'Add team member'),
+        e('div',{style:{display:'flex',gap:10,marginBottom:12,flexWrap:'wrap'}},
+          e('input',{type:'text',placeholder:'Full name',value:newMember.name,onChange:ev=>this.setState({newMember:{...newMember,name:ev.target.value}}),style:{...iS,flex:'1 1 160px'}}),
+          e('input',{type:'number',placeholder:'Capacity h/wk',value:newMember.capacity,min:1,max:80,onChange:ev=>this.setState({newMember:{...newMember,capacity:parseInt(ev.target.value)||40}}),style:{...iS,width:150}})
+        ),
+        e('button',{onClick:()=>{
+          if(!newMember.name.trim())return;
+          this.persist({members:[...members,newMember.name.trim()],newMember:{name:'',capacity:40}});
+        },style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add member')
+      ),
+      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
+        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
+          ...['Member','Active projects','Capacity',''].map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
+        )),
+        e('tbody',null,...members.map(m=>{
+          const active=this.getProjects().filter(p=>p.owner===m&&p.status!=='Completed'&&p.status!=='On Hold').length;
+          const cap=(this.OWNER_TOTALS[m]?.planned||[40])[0]+'h / wk';
+          return e('tr',{key:m,style:{borderBottom:'1px solid #f0f4f8'}},
+            e('td',{style:{padding:'12px 0',fontSize:14,fontWeight:500,color:this.NAVY}},m),
+            e('td',{style:{padding:'12px 8px',fontSize:13,color:this.GRAY}},`${active} active`),
+            e('td',{style:{padding:'12px 8px',fontSize:13,color:this.GRAY}},cap),
+            e('td',{style:{padding:'12px 0',textAlign:'right'}},
+              !this.DEFAULT_MEMBERS.includes(m)&&e('button',{onClick:()=>this.persist({members:members.filter(x=>x!==m)}),style:{padding:'4px 10px',border:'1px solid #e4e9ef',borderRadius:6,background:'#fff',color:this.GRAY,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Remove')
+            )
+          );
+        }))
+      )
+    );
+  }
+
+  buildKPIs(){
+    const ps=this.getProjects();
+    const active=ps.filter(p=>p.status!=='Completed'&&p.status!=='On Hold').length;
+    const own4=['Sweta','Jonny','Anil','Saurabh'];
+    const tAct=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual[1],0);
+    const tPlan=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned[1],0);
+    const util=Math.round(tAct/tPlan*100);
+    const behind=ps.filter(p=>p.planned4w[1]>0&&p.actual8w[6]<p.planned4w[1]*0.8).length;
+    const kpis=[
+      {v:active,suf:'',label:'Active projects',note:`of ${ps.length} total`},
+      {v:tAct,suf:'h',label:'Hours logged',note:'Jun 8–12 (team)'},
+      {v:util,suf:'%',label:'Delivery rate',note:'vs plan · Jun 8–12',color:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},
+      {v:behind,suf:'',label:'Behind plan',note:'projects under 80%',color:behind<=2?this.NAVY:this.RED},
+    ];
+    return e('div',{style:{display:'flex',flexWrap:'wrap'}},
+      ...kpis.map((k,i)=>e('div',{key:k.label,style:{flex:'1 1 160px',padding:'24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
+        e('div',{style:{fontSize:'clamp(36px,4vw,50px)',fontWeight:700,color:k.color||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},`${k.v}${k.suf}`),
+        e('div',{style:{fontSize:13,color:this.NAVY,fontWeight:500,marginTop:7}},k.label),
+        e('div',{style:{fontSize:12,color:this.GRAY,marginTop:3,fontWeight:300}},k.note)
+      ))
+    );
+  }
+
+  buildTeamBars(){
+    const MAX=48;
+    const owners=['Sweta','Jonny','Anil','Saurabh','Vinay'];
+    const rows=owners.map(o=>{
+      const d=this.OWNER_TOTALS[o],pl=d.planned[1],ac=d.actual[1];
+      const r=pl>0?ac/pl:null,pct=r!==null?Math.round(r*100):null;
+      const bc=r===null?'#c4cdd6':r>=0.95?this.GREEN:r>=0.75?this.BLUE:r>=0.5?this.AMBER:this.RED;
+      return e('div',{key:o,style:{marginBottom:18}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:7}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:12}},
+            e('span',{style:{fontSize:14,fontWeight:500,color:this.NAVY,minWidth:70}},o),
+            e('span',{style:{fontSize:12,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},`${ac}h actual · ${pl}h planned`)
+          ),
+          pct!==null&&e('span',{style:{fontSize:13,fontWeight:600,color:bc,fontVariantNumeric:'tabular-nums'}},`${pct}%`)
+        ),
+        e('div',{style:{position:'relative',height:10,background:'#e4e9ef',borderRadius:5,overflow:'visible'}},
+          e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:`${Math.min(pl/MAX*100,100)}%`,background:'#c4d8ec',borderRadius:5}}),
+          ac>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:`${Math.min(ac/MAX*100,125)}%`,background:bc,borderRadius:5}}),
+          e('div',{style:{position:'absolute',top:-3,left:`${40/MAX*100}%`,width:1,height:16,background:'#9aaabb',opacity:0.4}})
+        ),
+        ac>40&&e('div',{style:{fontSize:11,color:this.GREEN,marginTop:4,fontWeight:500}},`+${ac-40}h above capacity`)
+      );
+    });
+    return e('div',null,...rows,
+      e('div',{style:{display:'flex',gap:20,paddingTop:18,borderTop:'1px solid #e4e9ef',marginTop:4,flexWrap:'wrap'}},
+        ...([['#c4d8ec','Planned'],['#4778a8','Actual'],['#9aaabb','40h capacity']]).map(([c,l])=>
+          e('div',{key:l,style:{display:'flex',alignItems:'center',gap:6}},
+            e('div',{style:{width:12,height:6,borderRadius:3,background:c}}),
+            e('span',{style:{fontSize:12,color:this.GRAY}},l)
+          )
+        )
+      )
+    );
+  }
+
+  buildFilterBar(){
+    const{filterType}=this.state,ps=this.getProjects();
+    return e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:18}},
+      ...['All','Transform','Grow','Run','Agent'].map(t=>{
+        const a=filterType===t,c=this.TC[t]||this.NAVY;
+        const cnt=t==='All'?ps.length:ps.filter(p=>p.type===t).length;
+        return e('button',{key:t,onClick:()=>this.setState({filterType:t}),style:{padding:'5px 14px',borderRadius:9999,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${a?c:'#dde4eb'}`,background:a?c:'#fff',color:a?'#fff':'#6b7d94'}},`${t} (${cnt})`);
+      })
+    );
+  }
+
+  sparkline(p){
+    const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:0,fc:true}];
+    const mx=Math.max(1,...G.map(g=>Math.max(g.pl,g.ac)));
+    const W=76,H=24,bW=17,gap=2;
+    const rects=G.flatMap((g,i)=>{
+      const x=i*(bW+gap),pH=g.pl>0?Math.max(2,(g.pl/mx)*(H-2)):0,aH=g.ac>0?Math.max(2,(g.ac/mx)*(H-2)):0;
+      const r=g.pl>0&&!g.fc?g.ac/g.pl:null,ac=g.fc?'#c4d8ec':r===null?'#d4dce6':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
+      return[pH>0&&React.createElement('rect',{key:`p${i}`,x,y:H-pH,width:bW,height:pH,fill:'#e4e9ef',rx:1}),aH>0&&React.createElement('rect',{key:`a${i}`,x,y:H-aH,width:bW,height:aH,fill:ac,rx:1})].filter(Boolean);
+    });
+    return React.createElement('svg',{width:W,height:H,style:{flexShrink:0}},...rects);
+  }
+
+  buildTable(){
+    const{expandedProject}=this.state,ps=this.filtered();
+    const thead=e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+      ...['Project','Owner','Type','Status','Plan','Actual','Var','Trend'].map(h=>e('th',{key:h,style:{padding:'10px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Plan','Actual','Var'].includes(h)?'right':'left'}},h))
+    ));
+    const rows=ps.flatMap(p=>{
+      const isExp=expandedProject===p.name,pl=p.planned4w[1],ac=p.actual8w[6];
+      const vari=pl>0?ac-pl:null,ss=this.SS[p.status]||{dot:this.GRAY,color:this.GRAY},tc=this.TC[p.type]||this.BLUE;
+      const row=e('tr',{key:p.name,onClick:()=>this.setState({expandedProject:isExp?null:p.name}),onMouseEnter:ev=>{ev.currentTarget.style.background='#f0f4fa';},onMouseLeave:ev=>{ev.currentTarget.style.background=isExp?'#f4f7fb':'';},style:{cursor:'pointer',background:isExp?'#f4f7fb':'',borderBottom:'1px solid #e4e9ef',transition:'background 0.1s'}},
+        e('td',{style:{padding:'13px 12px',maxWidth:220}},e('div',{style:{display:'flex',alignItems:'center',gap:8}},e('div',{style:{width:3,height:18,borderRadius:2,background:tc,flexShrink:0}}),e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY,lineHeight:1.3}},p.name))),
+        e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+        e('td',{style:{padding:'13px 12px'}},e('span',{style:{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:4,color:tc,background:`${tc}18`}},p.type)),
+        e('td',{style:{padding:'13px 12px'}},e('div',{style:{display:'flex',alignItems:'center',gap:6}},e('div',{style:{width:6,height:6,borderRadius:'50%',background:ss.dot,flexShrink:0}}),e('span',{style:{fontSize:12,color:ss.color,whiteSpace:'nowrap'}},p.status))),
+        e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},pl>0?`${pl}h`:'—'),
+        e('td',{style:{padding:'13px 12px',fontSize:13,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},ac>0?`${ac}h`:'—'),
+        e('td',{style:{padding:'13px 12px',textAlign:'right'}},vari!==null&&vari!==0?e('span',{style:{fontSize:12,fontWeight:500,color:this.vc(vari)}},`${vari>0?'+':''}${vari}h`):e('span',{style:{color:'#dde4eb',fontSize:12}},'—')),
+        e('td',{style:{padding:'11px 12px 11px 8px'}},this.sparkline(p))
+      );
+      const det=isExp&&e('tr',{key:`${p.name}-d`},e('td',{colSpan:8,style:{padding:0,background:'#f4f7fb',borderBottom:'1px solid #dde4eb'}},this.buildDetail(p)));
+      return[row,det].filter(Boolean);
+    });
+    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
+      e('table',{style:{width:'100%',minWidth:640,borderCollapse:'collapse'}},thead,e('tbody',null,...rows))
+    );
+  }
+
+  buildDetail(p){
+    const WL=['May 1','May 8','May 15','May 22','May 29','Jun 5','Jun 12','Jun 19'];
+    const all=[...p.actual8w.map((a,i)=>({label:WL[i],actual:a,planned:i>=5?p.planned4w[i-5]:null,fc:false})),{label:'Jun 22',planned:p.planned4w[3],actual:null,fc:true},{label:'Jun 29',planned:p.forecast[0],actual:null,fc:true},{label:'Jul 6',planned:p.forecast[1],actual:null,fc:true}];
+    const mx=Math.max(1,...all.map(d=>Math.max(d.planned||0,d.actual||0)));
+    const CH=80,N=all.length,BW=22,totalAct=p.actual8w.reduce((s,v)=>s+v,0);
+    const nz=p.actual8w.filter(v=>v>0).length,avg=nz>0?(totalAct/nz).toFixed(1):'0';
+    return e('div',{style:{padding:'20px 24px 24px',display:'flex',gap:28,flexWrap:'wrap',animation:'slideDown 0.15s ease-out'}},
+      e('div',{style:{flex:'1 1 300px',minWidth:0}},
+        e('div',{style:{fontSize:10,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.08em',fontWeight:600,marginBottom:8}},'8-week trend + forecast'),
+        React.createElement('svg',{viewBox:`0 0 ${N*BW} ${CH+20}`,style:{width:'100%',height:'auto',display:'block',maxHeight:CH+20}},
+          ...all.map((d,i)=>{
+            const x=i*BW,bw=BW-3,pH=d.planned>0?Math.max(3,(d.planned/mx)*(CH-4)):0,aH=d.actual>0?Math.max(3,(d.actual/mx)*(CH-4)):0;
+            const r=d.planned&&d.actual!=null?d.actual/d.planned:null,ac=d.fc?'#c4d8ec':r===null?'#c4d8ec':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
+            return[
+              pH>0&&React.createElement('rect',{key:`p${i}`,x,y:CH-pH,width:bw,height:pH,fill:d.fc?'#ddeef9':'#dde9f4',rx:1}),
+              aH>0&&React.createElement('rect',{key:`a${i}`,x,y:CH-aH,width:bw,height:aH,fill:ac,rx:1}),
+              React.createElement('text',{key:`l${i}`,x:x+bw/2,y:CH+14,textAnchor:'middle',fontSize:7,fill:d.fc?'#c4cdd6':this.GRAY,style:{fontFamily:'inherit'}},d.label.split(' ')[1]||d.label.split(' ')[0]),
+            ].filter(Boolean);
+          }).flat()
+        )
+      ),
+      e('div',{style:{flexShrink:0,minWidth:160,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px 20px',alignContent:'start'}},
+        ...[['Type',p.type,this.TC[p.type]],['Owner',p.owner,null],['Status',p.status,null],['8-wk total',`${totalAct}h`,null],['Weekly avg',`${avg}h/wk`,null],['W0 forecast',p.planned4w[3]>0?`${p.planned4w[3]}h`:'—',null]].map(([l,v,c])=>
+          e('div',{key:l},e('div',{style:{fontSize:10,color:'#bbc4cf',textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:2}},l),e('div',{style:{fontSize:13,fontWeight:500,color:c||this.NAVY}},v))
+        )
+      )
+    );
+  }
+
+  buildWeekly(){
+    const owners=['Sweta','Jonny','Anil','Saurabh','Vinay'];
+    const wks=[{label:'Jun 1–5'},{label:'Jun 8–12'},{label:'Jun 15–19 *'},{label:'Jun 22–26 ▶'}].map((w,wi)=>({...w,planned:owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned[wi],0),actual:owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual[wi],0)}));
+    const mx=Math.max(...wks.map(w=>Math.max(w.planned,w.actual)));
+    const CH=140,BW=46,GAP=6,GRP=BW*2+GAP,SPC=22,VW=wks.length*(GRP+SPC);
+    const bars=wks.map((w,i)=>{
+      const x=i*(GRP+SPC),pH=Math.max(4,(w.planned/mx)*CH),aH=w.actual>0?Math.max(4,(w.actual/mx)*CH):0;
+      const fut=w.actual===0&&i>=2,r=w.planned>0?w.actual/w.planned:null;
+      const ac=fut?'#c4d8ec':r===null?'#dde4eb':r>=0.9?this.GREEN:r>=0.75?this.BLUE:this.AMBER;
+      return[
+        React.createElement('rect',{key:`pb${i}`,x,y:CH-pH,width:BW,height:pH,fill:'#dde9f4',rx:3}),
+        aH>0&&React.createElement('rect',{key:`ab${i}`,x:x+BW+GAP,y:CH-aH,width:BW,height:aH,fill:ac,rx:3}),
+        React.createElement('text',{key:`pv${i}`,x:x+BW/2,y:CH-pH-5,textAnchor:'middle',fontSize:10,fill:this.GRAY,style:{fontFamily:'inherit',fontWeight:500}},`${Math.round(w.planned)}h`),
+        w.actual>0&&React.createElement('text',{key:`av${i}`,x:x+BW+GAP+BW/2,y:CH-aH-5,textAnchor:'middle',fontSize:10,fill:this.BLUE,style:{fontFamily:'inherit',fontWeight:600}},`${Math.round(w.actual)}h`),
+        React.createElement('text',{key:`wl${i}`,x:x+GRP/2,y:CH+16,textAnchor:'middle',fontSize:11,fill:'#6b7d94',style:{fontFamily:'inherit'}},w.label),
+        React.createElement('text',{key:`ps${i}`,x:x+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},'Plan'),
+        React.createElement('text',{key:`as${i}`,x:x+BW+GAP+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},fut?'Fcst':'Actual'),
+      ].filter(Boolean);
+    }).flat();
+    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'24px',overflowX:'auto'}},
+      React.createElement('svg',{viewBox:`0 0 ${VW} ${CH+36}`,style:{minWidth:320,width:'100%',height:'auto',display:'block'}},...bars),
+      e('div',{style:{fontSize:11,color:'#bbc4cf',marginTop:10,lineHeight:1.6}},'* Jun 15–19 partial — Saurabh hours pending · ▶ Jun 22–26 in progress')
+    );
+  }
+
+  render(){
+    return e('div',{style:{minHeight:'100vh',fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",color:'#1b2d44',background:'#f6f8fb'}},
+
+      /* Nav */
+      e('nav',{style:{background:'#1b2d44',padding:'0 clamp(20px,5vw,64px)'}},
+        e('div',{style:{maxWidth:1120,margin:'0 auto',height:52,display:'flex',alignItems:'center',justifyContent:'space-between'}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:10}},
+            e('div',{style:{width:28,height:28,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+              e('span',{style:{color:'#fff',fontWeight:700,fontSize:10,letterSpacing:'-0.3px'}},'AA')
+            ),
+            e('span',{style:{color:'rgba(255,255,255,0.85)',fontSize:13,fontWeight:500}},'BAT Projects')
+          ),
+          e('div',{style:{display:'flex',alignItems:'center',gap:12}},
+            e('span',{style:{color:'rgba(255,255,255,0.3)',fontSize:12,fontWeight:300}},'Jun 22, 2026'),
+            this.buildManageBtn()
+          )
+        )
+      ),
+
+      /* Manage overlay */
+      this.buildManagePanel(),
+
+      /* Hero */
+      e('div',{style:{background:'#1b2d44',padding:'clamp(40px,6vw,80px) clamp(20px,5vw,64px) clamp(52px,8vw,100px)'}},
+        e('div',{style:{maxWidth:1120,margin:'0 auto'}},
+          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:600,marginBottom:16}},'Business Applications Team · Portfolio Review'),
+          e('h1',{style:{fontSize:'clamp(30px,5vw,58px)',fontWeight:300,color:'#fff',lineHeight:1.1,margin:'0 0 16px',letterSpacing:'-0.025em',maxWidth:600}},
+            'What the team',e('br',null),'is building.'
+          ),
+          e('p',{style:{fontSize:'clamp(13px,1.8vw,16px)',color:'rgba(255,255,255,0.4)',maxWidth:480,lineHeight:1.75,fontWeight:300,margin:0}},
+            'Planned hours, actual delivery, and variance across all projects. Click ',
+            e('strong',{style:{color:'rgba(255,255,255,0.6)',fontWeight:500}},'Manage'),
+            ' to log hours, add projects, or update the team.'
+          )
+        )
+      ),
+
+      /* KPI strip */
+      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef'}},
+        e('div',{style:{maxWidth:1120,margin:'0 auto',padding:'0 clamp(20px,5vw,64px)'}},
+          this.buildKPIs()
+        )
+      ),
+
+      /* Main */
+      e('div',{style:{maxWidth:1120,margin:'0 auto',padding:'clamp(48px,6vw,80px) clamp(20px,5vw,64px)'}},
+
+        /* Section 01 – Team allocation */
+        e('section',{style:{marginBottom:'clamp(52px,7vw,88px)'}},
+          e('div',{style:{display:'flex',alignItems:'flex-start',gap:18,marginBottom:28}},
+            e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'01'),
+            e('div',null,
+              e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Team allocation'),
+              e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},'Planned vs. actual hours per person — Jun 8–12, the last complete week.')
+            )
+          ),
+          this.buildTeamBars()
+        ),
+
+        e('div',{style:{height:1,background:'#e4e9ef',marginBottom:'clamp(52px,7vw,88px)'}}),
+
+        /* Section 02 – Active portfolio */
+        e('section',{style:{marginBottom:'clamp(52px,7vw,88px)'}},
+          e('div',{style:{display:'flex',alignItems:'flex-start',gap:18,marginBottom:28}},
+            e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'02'),
+            e('div',null,
+              e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Active portfolio'),
+              e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},'Every project in flight. Click any row to see the full 8-week trend.')
+            )
+          ),
+          this.buildFilterBar(),
+          this.buildTable()
+        ),
+
+        e('div',{style:{height:1,background:'#e4e9ef',marginBottom:'clamp(52px,7vw,88px)'}}),
+
+        /* Section 03 – Planned vs. actual */
+        e('section',null,
+          e('div',{style:{display:'flex',alignItems:'flex-start',gap:18,marginBottom:28}},
+            e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'03'),
+            e('div',null,
+              e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Planned vs. actual'),
+              e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},'Team-wide delivery by week. Light = planned, filled = delivered.')
+            )
+          ),
+          this.buildWeekly()
+        )
+      ),
+
+      /* Footer */
+      e('footer',{style:{background:'#1b2d44',marginTop:'clamp(52px,7vw,88px)',padding:'clamp(18px,3vw,32px) clamp(20px,5vw,64px)'}},
+        e('div',{style:{maxWidth:1120,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
+          e('span',{style:{color:'rgba(255,255,255,0.25)',fontSize:12,fontWeight:300}},'Business Applications Team · Automation Anywhere'),
+          e('span',{style:{color:'rgba(255,255,255,0.18)',fontSize:12,fontWeight:300}},'Generated Jun 22, 2026')
+        )
+      )
+    );
+  }
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(BATDashboard));
+</script>
+</body>
+</html>

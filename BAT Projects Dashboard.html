@@ -26,6 +26,30 @@ class DCLogic {
   }
   componentDidMount() {}
 }
+
+/* ── SharePoint / Power Automate config ─────────────────────────
+   Paste your Power Automate HTTP trigger URLs below.
+   Leave as-is to run in localStorage-only mode while setting up.
+──────────────────────────────────────────────────────────────── */
+const SP_READ_URL  = 'YOUR_READ_FLOW_URL';   // Flow 1 — GET trigger URL
+const SP_WRITE_URL = 'YOUR_WRITE_FLOW_URL';  // Flow 2 — POST trigger URL
+const SP_READY = SP_READ_URL !== 'YOUR_READ_FLOW_URL';
+
+async function spRead() {
+  const res = await fetch(SP_READ_URL);
+  if (!res.ok) throw new Error('SharePoint read failed: ' + res.status);
+  const j = await res.json();
+  return JSON.parse(j.data || '{}');
+}
+
+async function spWrite(data) {
+  // text/plain avoids CORS preflight — Power Automate receives body as string, parse with JSON.parse(triggerBody()) in the flow
+  await fetch(SP_WRITE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify(data)
+  });
+}
 </script>
 <script>
 class Component extends DCLogic {
@@ -117,21 +141,37 @@ class Component extends DCLogic {
   };
 
   /* ── Lifecycle ─────────────────────────────────── */
-  componentDidMount(){
+  async componentDidMount(){
     try{
-      const d=JSON.parse(localStorage.getItem('bat_v1')||'{}');
-      const p={};
-      if(d.weeklyLog){const mig={};Object.entries(d.weeklyLog).forEach(([n,v])=>{if(v&&typeof v==='object'){const fk=Object.keys(v)[0];mig[n]=(fk&&!fk.startsWith('w_'))?{'w_jun26':v}:v;}});p.weeklyLog=mig;}
-      if(d.members)p.members=d.members;
-      if(d.projects)p.projects=d.projects;
-      if(d.ptoLog)p.ptoLog=d.ptoLog;
-      if(d.projectComments)p.projectComments=d.projectComments;
-      if(Object.keys(p).length)this.setState(p);
-    }catch(e){}
+      const d = SP_READY ? await spRead() : JSON.parse(localStorage.getItem('bat_v1')||'{}');
+      this._applyData(d);
+    }catch(e){
+      // SharePoint failed — fall back to localStorage
+      try{this._applyData(JSON.parse(localStorage.getItem('bat_v1')||'{}'));}catch(e2){}
+    }
+    if(SP_READY){
+      // Poll every 30s so all team members stay in sync
+      this._pollId=setInterval(async()=>{
+        try{const d=await spRead();this._applyData(d);}catch(e){}
+      },30000);
+    }
+  }
+  _applyData(d){
+    const p={};
+    if(d.weeklyLog){const mig={};Object.entries(d.weeklyLog).forEach(([n,v])=>{if(v&&typeof v==='object'){const fk=Object.keys(v)[0];mig[n]=(fk&&!fk.startsWith('w_'))?{'w_jun26':v}:v;}});p.weeklyLog=mig;}
+    if(d.members)p.members=d.members;
+    if(d.projects)p.projects=d.projects;
+    if(d.ptoLog)p.ptoLog=d.ptoLog;
+    if(d.projectComments)p.projectComments=d.projectComments;
+    if(Object.keys(p).length)this.setState(p);
   }
   persist(patch){
     const n={...this.state,...patch};
-    try{localStorage.setItem('bat_v1',JSON.stringify({weeklyLog:n.weeklyLog,members:n.members,projects:n.projects,ptoLog:n.ptoLog,projectComments:n.projectComments}));}catch(e){}
+    const data={weeklyLog:n.weeklyLog,members:n.members,projects:n.projects,ptoLog:n.ptoLog,projectComments:n.projectComments};
+    // Always write localStorage as offline fallback
+    try{localStorage.setItem('bat_v1',JSON.stringify(data));}catch(e){}
+    // Write to SharePoint if configured
+    if(SP_READY)spWrite(data).catch(e=>console.warn('SharePoint save failed:',e));
     this.setState(patch);
   }
 

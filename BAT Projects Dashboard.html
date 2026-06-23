@@ -1,82 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>BAT Projects Dashboard</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-<script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-<style>
-  *,*::before,*::after{box-sizing:border-box;}
-  body{margin:0;background:#f6f8fb;}
-  @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
-  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
-  input:focus,select:focus,button:focus{outline:2px solid #4778a8;outline-offset:1px}
-  ::-webkit-scrollbar{width:4px;height:4px}
-  ::-webkit-scrollbar-thumb{background:#c4cdd6;border-radius:2px}
-</style>
+<script src="./support.js"></script>
 </head>
 <body>
-<div id="root"></div>
-<script>
-const e = React.createElement;
+<x-dc>
+<helmet>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="_ds/rio-design-system-019dd202-0263-75e0-8e33-28f968b88652/rio-tokens-light.css">
+  <script src="_ds/rio-design-system-019dd202-0263-75e0-8e33-28f968b88652/_ds_bundle.js"></script>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;}
+    body{margin:0;}
+    @keyframes slideDown{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    ::-webkit-scrollbar{width:4px;height:4px}
+    ::-webkit-scrollbar-thumb{background:#c4cdd6;border-radius:2px}
+  </style>
+</helmet>
 
-class BATDashboard extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-      filterType:'All', filterOwner:'All', expandedProject:null,
-      showManage:false, manageTab:'hours',
-      entryMember:'Sweta', selectedWeek:'w7',
-      weeklyLog:{}, members:null, projects:null,
-      hourEntries:{},
-      chartView:'weekly',
-      newProject:{name:'',owner:'Sweta',type:'Transform',status:'Implementation'},
-      newMember:{name:'',capacity:40},
-    };
-  }
+<div style="display:flex;height:100vh;overflow:hidden;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;color:#1b2d44">
+  {{ nav }}
+  <div style="flex:1;overflow-y:auto;background:#f6f8fb;min-width:0">{{ mainContent }}</div>
+  {{ projectModal }}
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    view:'dashboard',
+    filterType:'All',filterOwner:'All',expandedProject:null,
+    timelineView:'monthly',timelineOffset:0,
+    projectFilter:'active',
+    showProjectModal:false,editProjectId:null,
+    projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]},
+    logMember:'Sweta',logWeek:'w_jun26',logEntries:{},logSaved:false,
+    ptoLog:{},projectComments:{},commentForm:{author:'Sweta',text:'',isBlocker:false},
+    newMember:{name:'',capacity:40},
+    weeklyLog:{},members:null,projects:null,
+  };
 
-  NAVY='#1b2d44'; BLUE='#4778a8'; GREEN='#2ea86a'; AMBER='#d98f28'; RED='#c73a3a'; GRAY='#9aaabb';
+  NAVY='#1b2d44';BLUE='#4778a8';GREEN='#2ea86a';AMBER='#d98f28';RED='#c73a3a';GRAY='#9aaabb';
   TC={Transform:'#4778a8',Grow:'#2ea86a',Run:'#d98f28',Agent:'#7055c0'};
-  SS={Completed:{dot:'#2ea86a',color:'#2ea86a'},Implementation:{dot:'#4778a8',color:'#4778a8'},Support:{dot:'#4778a8',color:'#4778a8'},Assessment:{dot:'#9aaabb',color:'#9aaabb'},'On Hold':{dot:'#d98f28',color:'#d98f28'}};
+  PC={'Analysis':'#7055c0','Implementation':'#4778a8','Testing':'#d98f28','Go-live':'#2ea86a','Support':'#6b7d94','Assessment':'#9aaabb','RFP':'#c73a3a'};
 
-  // WEEKS: actualIdx = index into actual8w, planIdx = index into planned4w (null if not available)
   WEEKS=[
-    {key:'w7',label:'Jun 22–26 (current ▶)',shortLabel:'Jun 22',actualIdx:7,planIdx:3},
-    {key:'w6',label:'Jun 15–19',shortLabel:'Jun 15',actualIdx:6,planIdx:2},
-    {key:'w5',label:'Jun 8–12',shortLabel:'Jun 8',actualIdx:5,planIdx:1},
-    {key:'w4',label:'Jun 1–5',shortLabel:'Jun 1',actualIdx:4,planIdx:0},
-    {key:'w3',label:'May 25–29',shortLabel:'May 25',actualIdx:3,planIdx:null},
-    {key:'w2',label:'May 18–22',shortLabel:'May 18',actualIdx:2,planIdx:null},
-    {key:'w1',label:'May 11–15',shortLabel:'May 11',actualIdx:1,planIdx:null},
-    {key:'w0',label:'May 4–8',shortLabel:'May 4',actualIdx:0,planIdx:null},
+    {id:'w_may1', short:'May 1',  month:4,actualIdx:0,plannedIdx:null},
+    {id:'w_may8', short:'May 8',  month:4,actualIdx:1,plannedIdx:null},
+    {id:'w_may15',short:'May 15', month:4,actualIdx:2,plannedIdx:null},
+    {id:'w_may22',short:'May 22', month:4,actualIdx:3,plannedIdx:null},
+    {id:'w_may29',short:'May 29', month:4,actualIdx:4,plannedIdx:null},
+    {id:'w_jun5', short:'Jun 5',  month:5,actualIdx:5,plannedIdx:0},
+    {id:'w_jun12',short:'Jun 12', month:5,actualIdx:6,plannedIdx:1},
+    {id:'w_jun19',short:'Jun 19', month:5,actualIdx:7,plannedIdx:2},
+    {id:'w_jun26',short:'Jun 26 ▶',month:5,actualIdx:null,plannedIdx:3,current:true},
   ];
+  ALL_WEEKS=[
+    {id:'w_may1', short:'May 1', month:4,actualIdx:0,plannedIdx:null,forecastIdx:null,isFuture:false},
+    {id:'w_may8', short:'May 8', month:4,actualIdx:1,plannedIdx:null,forecastIdx:null,isFuture:false},
+    {id:'w_may15',short:'May 15',month:4,actualIdx:2,plannedIdx:null,forecastIdx:null,isFuture:false},
+    {id:'w_may22',short:'May 22',month:4,actualIdx:3,plannedIdx:null,forecastIdx:null,isFuture:false},
+    {id:'w_may29',short:'May 29',month:4,actualIdx:4,plannedIdx:null,forecastIdx:null,isFuture:false},
+    {id:'w_jun5', short:'Jun 5', month:5,actualIdx:5,plannedIdx:0,forecastIdx:null,isFuture:false},
+    {id:'w_jun12',short:'Jun 12',month:5,actualIdx:6,plannedIdx:1,forecastIdx:null,isFuture:false},
+    {id:'w_jun19',short:'Jun 19',month:5,actualIdx:7,plannedIdx:2,forecastIdx:null,isFuture:false},
+    {id:'w_jun26',short:'Jun 26',month:5,actualIdx:null,plannedIdx:3,forecastIdx:null,isFuture:false,current:true},
+    {id:'w_jul3', short:'Jul 3', month:6,actualIdx:null,plannedIdx:null,forecastIdx:0,isFuture:true},
+    {id:'w_jul10',short:'Jul 10',month:6,actualIdx:null,plannedIdx:null,forecastIdx:1,isFuture:true},
+    {id:'w_jul17',short:'Jul 17',month:6,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
+    {id:'w_jul24',short:'Jul 24',month:6,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
+    {id:'w_jul31',short:'Jul 31',month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
+    {id:'w_aug7', short:'Aug 7', month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
+    {id:'w_aug14',short:'Aug 14',month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
+  ];
+  MONTHS=[
+    {id:'may',label:'May',month:4,isFuture:false},
+    {id:'jun',label:'Jun',month:5,isFuture:false},
+    {id:'jul',label:'Jul',month:6,isFuture:true},
+    {id:'aug',label:'Aug',month:7,isFuture:true},
+    {id:'sep',label:'Sep',month:8,isFuture:true},
+  ];
+  MONTH_OPTS=['Jan 26','Feb 26','Mar 26','Apr 26','May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27','Mar 27','Apr 27','May 27','Jun 27'].map((l,i)=>({label:l,value:i}));
 
   DEFAULT_MEMBERS=['Sweta','Jonny','Anil','Saurabh','Vinay'];
   DEFAULT_PROJECTS=[
-    {name:'Aisera PMI Project',owner:'Sweta',type:'Transform',status:'Completed',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'AP Advance Matching',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[2,0,2,0,2,4,4,3],planned4w:[4,4,5.2,6],forecast:[3.6,2,2]},
-    {name:'Bank Integrations',owner:'Anil',type:'Transform',status:'Implementation',actual8w:[0,0,0,0,0,4,4,0],planned4w:[4,4,4,4],forecast:[4,4,4]},
-    {name:'India Functions',owner:'Saurabh',type:'Run',status:'Implementation',actual8w:[0,3,3,2,0,3,3,0],planned4w:[3,3,3,3],forecast:[1.2,0,0]},
-    {name:'Fixed Assets / Inventory',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,10,12,0],planned4w:[10,10,10,10],forecast:[8.8,8,8]},
-    {name:'Concur Integration',owner:'Anil',type:'Grow',status:'Support',actual8w:[2,2,2,2,2,2,2,2],planned4w:[2,2,2,2],forecast:[0.8,0,0]},
-    {name:'Dunning Letters',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,1,2,0],planned4w:[1,1,0.8,1],forecast:[0.2,0,0]},
-    {name:'Blackline Re-Implementation',owner:'Sweta',type:'Grow',status:'Implementation',actual8w:[10,10,12.5,10,10,10,10,5],planned4w:[10,10,10,10],forecast:[7,5,5]},
-    {name:'Workday HRMS RFP',owner:'Vinay',type:'Grow',status:'Assessment',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'Columbia ERP Implementation',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[0,0,2,0,1,0,1,1],planned4w:[2,2,2,2],forecast:[2,2,2]},
-    {name:'Recon Agent',owner:'Sweta',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,2,0],planned4w:[1,1,1,1],forecast:[1,1,1]},
-    {name:'ASF P2P Solution',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,3,0],planned4w:[1,1,1,0],forecast:[0.6,1,1]},
-    {name:'AP PO UK (A360)',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,0,0,0,0,1,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'Cash Auto Application',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[5,0,0,0,2,2,2,2],planned4w:[2,2,2,2],forecast:[2,2,2]},
-    {name:'Payment Buddy',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[4,0,4,0,4,4,2,2],planned4w:[2,2,6,7],forecast:[7,7,5.8]},
-    {name:'Adopt Use Cases',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[0,5,5,5,5,5,1,0],planned4w:[5,5,5,5],forecast:[2.6,1,1]},
-    {name:'Transform Flux Reports 2.0',owner:'Jonny',type:'Transform',status:'On Hold',actual8w:[5,0,8,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'FPNA - Process & Agent',owner:'Sweta',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'SAP - Columbia Impl.',owner:'Sweta',type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0]},
-    {name:'Workday Data Scramble',owner:'Anil',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0]},
-    {name:'Cash Auto App (Anil)',owner:'Anil',type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3]},
+    {name:'Aisera PMI Project',owner:'Sweta',type:'Transform',status:'Completed',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Completed',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:2,hpw:0}]},
+    {name:'AP Advance Matching',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[2,0,2,0,2,4,4,3],planned4w:[4,4,5.2,6],forecast:[3.6,2,2],currentPhase:'Implementation',phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:2},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:5.2},{id:3,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
+    {name:'Bank Integrations',owner:'Anil',type:'Transform',status:'Implementation',actual8w:[0,0,0,0,0,4,4,0],planned4w:[4,4,4,4],forecast:[4,4,4],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:4},{id:2,name:'Support',startMonth:5,endMonth:8,hpw:4}]},
+    {name:'India Functions',owner:'Saurabh',type:'Run',status:'Implementation',actual8w:[0,3,3,2,0,3,3,0],planned4w:[3,3,3,3],forecast:[1.2,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:5},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:3}]},
+    {name:'Fixed Assets / Inventory',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,10,12,0],planned4w:[10,10,10,10],forecast:[8.8,8,8],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:2,name:'Support',startMonth:5,endMonth:7,hpw:8}]},
+    {name:'Concur Integration',owner:'Anil',type:'Grow',status:'Support',actual8w:[2,2,2,2,2,2,2,2],planned4w:[2,2,2,2],forecast:[0.8,0,0],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:2,endMonth:5,hpw:2}]},
+    {name:'Dunning Letters',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,1,2,0],planned4w:[1,1,0.8,1],forecast:[0.2,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1}]},
+    {name:'Blackline Re-Implementation',owner:'Sweta',type:'Grow',status:'Implementation',actual8w:[10,10,12.5,10,10,10,10,5],planned4w:[10,10,10,10],forecast:[7,5,5],currentPhase:'Implementation',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:2},{id:2,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:3,name:'Testing',startMonth:6,endMonth:7,hpw:5}]},
+    {name:'Workday HRMS RFP',owner:'Vinay',type:'Grow',status:'Assessment',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:0},{id:2,name:'RFP',startMonth:3,endMonth:4,hpw:0}]},
+    {name:'Columbia ERP Implementation',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[0,0,2,0,1,0,1,1],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',phases:[{id:1,name:'RFP',startMonth:0,endMonth:3,hpw:2},{id:2,name:'Implementation',startMonth:4,endMonth:7,hpw:2}]},
+    {name:'Recon Agent',owner:'Sweta',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,2,0],planned4w:[1,1,1,1],forecast:[1,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:1}]},
+    {name:'ASF P2P Solution',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,3,0],planned4w:[1,1,1,0],forecast:[0.6,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:0.6}]},
+    {name:'AP PO UK (A360)',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,0,0,0,0,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:0}]},
+    {name:'Cash Auto Application',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[5,0,0,0,2,2,2,2],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:4,endMonth:6,hpw:2}]},
+    {name:'Payment Buddy',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[4,0,4,0,4,4,2,2],planned4w:[2,2,6,7],forecast:[7,7,5.8],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:6},{id:2,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
+    {name:'Adopt Use Cases',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[0,5,5,5,5,5,1,0],planned4w:[5,5,5,5],forecast:[2.6,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:5},{id:2,name:'Go-live',startMonth:6,endMonth:6,hpw:1}]},
+    {name:'Transform Flux Reports 2.0',owner:'Jonny',type:'Transform',status:'On Hold',actual8w:[5,0,8,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'On Hold',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:5,hpw:0}]},
+    {name:'FPNA - Process & Agent',owner:'Sweta',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
+    {name:'SAP - Columbia Impl.',owner:'Sweta',type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
+    {name:'Workday Data Scramble',owner:'Anil',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:2,endMonth:5,hpw:3}]},
+    {name:'Cash Auto App (Anil)',owner:'Anil',type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:6,hpw:3}]},
   ];
   OWNER_TOTALS={
     Sweta:{planned:[36,36,36,36],actual:[36,40,41,0]},
@@ -86,610 +118,878 @@ class BATDashboard extends React.Component {
     Vinay:{planned:[4,4,4,4],actual:[0,0,0,0]},
   };
 
+  /* ── Lifecycle ─────────────────────────────────── */
   componentDidMount(){
     try{
       const d=JSON.parse(localStorage.getItem('bat_v1')||'{}');
       const p={};
-      if(d.weeklyLog){
-        // migrate old flat format {name:{planned,actual}} → {name:{w7:{planned,actual}}}
-        const migrated={};
-        Object.entries(d.weeklyLog).forEach(([name,v])=>{
-          if(v&&typeof v==='object'&&!this.WEEKS.some(w=>v[w.key]!==undefined)){
-            migrated[name]={w7:v};
-          } else {
-            migrated[name]=v;
-          }
-        });
-        p.weeklyLog=migrated;
-      }
+      if(d.weeklyLog){const mig={};Object.entries(d.weeklyLog).forEach(([n,v])=>{if(v&&typeof v==='object'){const fk=Object.keys(v)[0];mig[n]=(fk&&!fk.startsWith('w_'))?{'w_jun26':v}:v;}});p.weeklyLog=mig;}
       if(d.members)p.members=d.members;
       if(d.projects)p.projects=d.projects;
+      if(d.ptoLog)p.ptoLog=d.ptoLog;
+      if(d.projectComments)p.projectComments=d.projectComments;
       if(Object.keys(p).length)this.setState(p);
     }catch(e){}
   }
-
   persist(patch){
     const n={...this.state,...patch};
-    try{localStorage.setItem('bat_v1',JSON.stringify({weeklyLog:n.weeklyLog,members:n.members,projects:n.projects}));}catch(e){}
+    try{localStorage.setItem('bat_v1',JSON.stringify({weeklyLog:n.weeklyLog,members:n.members,projects:n.projects,ptoLog:n.ptoLog,projectComments:n.projectComments}));}catch(e){}
     this.setState(patch);
   }
 
+  /* ── Data helpers ──────────────────────────────── */
   getMembers(){return this.state.members||this.DEFAULT_MEMBERS;}
-
   getProjects(){
     const base=this.state.projects||this.DEFAULT_PROJECTS;
-    const{weeklyLog}=this.state;
     return base.map(p=>{
-      const plog=weeklyLog[p.name];
-      if(!plog)return p;
-      const newActual=[...p.actual8w];
-      const newPlanned=[...p.planned4w];
-      this.WEEKS.forEach(w=>{
-        const entry=plog[w.key];
-        if(!entry)return;
-        if(w.actualIdx!==null&&entry.actual!==''&&entry.actual!=null)newActual[w.actualIdx]=Number(entry.actual);
-        if(w.planIdx!==null&&entry.planned!==''&&entry.planned!=null)newPlanned[w.planIdx]=Number(entry.planned);
-      });
-      return{...p,actual8w:newActual,planned4w:newPlanned};
+      const log=this.state.weeklyLog[p.name];if(!log)return p;
+      const a8=[...p.actual8w],p4=[...p.planned4w];
+      this.WEEKS.forEach(w=>{const ov=log[w.id];if(!ov)return;if(w.actualIdx!==null&&ov.actual!=null)a8[w.actualIdx]=ov.actual;if(w.plannedIdx!==null&&ov.planned!=null)p4[w.plannedIdx]=ov.planned;});
+      const w0=log['w_jun26'];if(w0?.planned!=null)p4[3]=w0.planned;
+      return{...p,actual8w:a8,planned4w:p4};
     });
   }
-
   filtered(){
-    const{filterType,filterOwner}=this.state;
-    let ps=this.getProjects();
-    if(filterType!=='All')ps=ps.filter(p=>p.type===filterType);
-    if(filterOwner!=='All')ps=ps.filter(p=>p.owner===filterOwner);
+    let ps=this.getProjects().filter(p=>!['Completed','Archived'].includes(p.status));
+    if(this.state.filterType!=='All')ps=ps.filter(p=>p.type===this.state.filterType);
+    if(this.state.filterOwner!=='All')ps=ps.filter(p=>p.owner===this.state.filterOwner);
     return ps;
   }
-
-  vc(v){if(v===null||v===undefined)return this.GRAY;return v>=0?this.GREEN:Math.abs(v)<=2?this.AMBER:this.RED;}
-
-  loadWeekEntries(weekKey,memberName){
-    const member=memberName||this.state.entryMember;
-    const wk=this.WEEKS.find(w=>w.key===weekKey)||this.WEEKS[0];
-    const ps=this.getProjects().filter(p=>p.owner===member&&p.status!=='Completed'&&p.status!=='On Hold');
+  loadWeekEntries(weekId,member){
+    const wk=this.WEEKS.find(w=>w.id===weekId);
     const entries={};
-    ps.forEach(p=>{
-      const plog=this.state.weeklyLog[p.name];
-      const we=plog&&plog[weekKey];
-      const rawPlanned=we?.planned??( wk.planIdx!==null ? p.planned4w[wk.planIdx] : '');
-      const rawActual=we?.actual??(wk.actualIdx!==null ? p.actual8w[wk.actualIdx] : '');
-      entries[p.name]={
-        planned:rawPlanned===0?'':rawPlanned,
-        actual:rawActual===0?'':rawActual,
-      };
+    this.getProjects().filter(p=>p.owner===member&&!['Completed','Archived'].includes(p.status)).forEach(p=>{
+      const ov=this.state.weeklyLog[p.name]?.[weekId];
+      const dA=wk&&wk.actualIdx!==null?p.actual8w[wk.actualIdx]:'';
+      const dP=wk&&wk.plannedIdx!==null?p.planned4w[wk.plannedIdx]:weekId==='w_jun26'?p.planned4w[3]:'';
+      entries[p.name]={planned:ov?.planned!=null?ov.planned:dP,actual:ov?.actual!=null?ov.actual:(dA||'')};
     });
     return entries;
   }
+  estTotal(phases){return phases.reduce((s,ph)=>s+ph.hpw*(ph.endMonth-ph.startMonth+1)*4.33,0);}
+  actTotal(p){return p.actual8w.reduce((s,v)=>s+v,0)+Object.values(this.state.weeklyLog[p.name]||{}).reduce((s,w)=>s+(w?.actual||0),0);}
+  getMemberPTO(m,wid){return this.state.ptoLog[m]?.[wid]||0;}
+  getBlockers(pname){return(this.state.projectComments[pname]||[]).filter(c=>c.isBlocker&&!c.resolved);}
+  e(t,p,...c){return React.createElement(t,p,...c);}
+  vc(v){if(!v&&v!==0)return this.GRAY;return v>=0?this.GREEN:Math.abs(v)<=2?this.AMBER:this.RED;}
 
-  // ── Manage button ──────────────────────────────────────────────
-  buildManageBtn(){
-    return e('button',{
-      onClick:()=>{
-        const entries=this.loadWeekEntries(this.state.selectedWeek,this.state.entryMember);
-        this.setState({showManage:true,manageTab:'hours',hourEntries:entries});
-      },
-      style:{padding:'7px 16px',borderRadius:7,border:'1px solid rgba(255,255,255,0.2)',background:'rgba(255,255,255,0.1)',color:'rgba(255,255,255,0.9)',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}
-    },'Manage');
+  /* ── Comment actions ───────────────────────────── */
+  addComment(pname){
+    const{commentForm,projectComments}=this.state;
+    if(!commentForm.text.trim())return;
+    const c={id:Date.now(),author:commentForm.author,text:commentForm.text.trim(),ts:new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),isBlocker:commentForm.isBlocker,resolved:false};
+    this.persist({projectComments:{...projectComments,[pname]:[...(projectComments[pname]||[]),c]},commentForm:{...commentForm,text:'',isBlocker:false}});
+  }
+  resolveComment(pname,cid){
+    const u={...this.state.projectComments};
+    u[pname]=(u[pname]||[]).map(c=>c.id===cid?{...c,resolved:true}:c);
+    this.persist({projectComments:u});
   }
 
-  // ── Manage panel ───────────────────────────────────────────────
-  buildManagePanel(){
-    if(!this.state.showManage)return null;
-    const{manageTab}=this.state;
-    const tabs=[['hours','Log Hours'],['projects','Projects'],['team','Team']];
-    const content=manageTab==='hours'?this.buildHoursTab():manageTab==='projects'?this.buildProjectsTab():this.buildTeamTab();
-    return e('div',{style:{position:'fixed',inset:0,background:'rgba(10,20,35,0.72)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflowY:'auto',animation:'fadeIn 0.15s ease-out'}},
-      e('div',{style:{background:'#fff',borderRadius:12,width:'100%',maxWidth:680,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}},
-        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 24px',borderBottom:'1px solid #e4e9ef',flexShrink:0}},
-          e('span',{style:{fontSize:15,fontWeight:600,color:this.NAVY}},'Manage'),
-          e('button',{onClick:()=>this.setState({showManage:false}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit'}},'×')
-        ),
-        e('div',{style:{display:'flex',borderBottom:'1px solid #e4e9ef',padding:'0 24px',flexShrink:0}},
-          ...tabs.map(([id,label])=>e('button',{key:id,onClick:()=>this.setState({manageTab:id}),style:{padding:'11px 16px',border:'none',borderBottom:`2px solid ${manageTab===id?this.BLUE:'transparent'}`,background:'transparent',color:manageTab===id?this.BLUE:'#6b7d94',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',marginBottom:-1}},label))
-        ),
-        e('div',{style:{flex:1,overflowY:'auto',padding:'24px'}},content)
-      )
-    );
-  }
+  /* ── Icons ─────────────────────────────────────── */
+  iconGrid(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'currentColor'},React.createElement('rect',{x:0,y:0,width:7,height:7,rx:1}),React.createElement('rect',{x:9,y:0,width:7,height:7,rx:1}),React.createElement('rect',{x:0,y:9,width:7,height:7,rx:1}),React.createElement('rect',{x:9,y:9,width:7,height:7,rx:1}));}
+  iconFolder(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('path',{d:'M1 5a1 1 0 011-1h4l1.5 2H14a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5z'}));}
+  iconClock(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:8,cy:8,r:6.5}),React.createElement('path',{d:'M8 4.5V8l2.5 1.5'}));}
+  iconTeam(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:6,cy:5,r:2.5}),React.createElement('path',{d:'M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5'}),React.createElement('circle',{cx:12.5,cy:5.5,r:2}),React.createElement('path',{d:'M15 14c0-2.21-1.79-4-4-4'}));}
 
-  // ── Hours tab (with week selector) ────────────────────────────
-  buildHoursTab(){
-    const{entryMember,hourEntries,selectedWeek}=this.state;
-    const members=this.getMembers();
-    const wk=this.WEEKS.find(w=>w.key===selectedWeek)||this.WEEKS[0];
-    const showPlanned=wk.planIdx!==null;
-    const iS={width:72,padding:'6px 10px',border:'1px solid #dde4eb',borderRadius:7,fontSize:13,textAlign:'right',fontFamily:'inherit',background:'#fff',color:this.NAVY};
-    const ps=this.getProjects().filter(p=>p.owner===entryMember&&p.status!=='Completed'&&p.status!=='On Hold');
-
-    return e('div',null,
-      // member picker
-      e('div',{style:{marginBottom:14}},
-        e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8}},'Team member'),
-        e('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-          ...members.map(m=>e('button',{key:m,onClick:()=>{
-            const ent=this.loadWeekEntries(selectedWeek,m);
-            this.setState({entryMember:m,hourEntries:ent});
-          },style:{padding:'5px 14px',borderRadius:9999,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${entryMember===m?this.BLUE:'#dde4eb'}`,background:entryMember===m?this.BLUE:'#fff',color:entryMember===m?'#fff':'#6b7d94'}},m))
+  /* ── Nav ───────────────────────────────────────── */
+  buildNav(){
+    const{e}=this,{view}=this.state;
+    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['team','Team',this.iconTeam()]];
+    return e('nav',{style:{width:220,flexShrink:0,background:this.NAVY,display:'flex',flexDirection:'column',height:'100vh'}},
+      e('div',{style:{padding:'18px 16px 14px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(255,255,255,0.08)'}},
+        e('div',{style:{width:32,height:32,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+          e('span',{style:{color:'#fff',fontWeight:900,fontSize:11,letterSpacing:'-0.5px'}},'AA')
+        ),
+        e('div',null,
+          e('div',{style:{fontSize:13,fontWeight:600,color:'#fff',lineHeight:1}},'BAT Projects'),
+          e('div',{style:{fontSize:10,color:'rgba(255,255,255,0.35)',marginTop:2}},'Apps Team')
         )
       ),
+      e('div',{style:{flex:1,padding:'12px 8px',display:'flex',flexDirection:'column',gap:2}},
+        ...items.map(([id,lbl,icon])=>e('button',{key:id,onClick:()=>this.setState({view:id}),style:{display:'flex',alignItems:'center',gap:10,padding:'9px 12px',borderRadius:8,border:'none',cursor:'pointer',fontFamily:'inherit',textAlign:'left',width:'100%',background:view===id?'rgba(255,255,255,0.13)':'transparent',color:view===id?'#fff':'rgba(255,255,255,0.55)'}},
+          e('span',{style:{flexShrink:0}},icon),
+          e('span',{style:{fontSize:13,fontWeight:view===id?600:400}},lbl)
+        ))
+      ),
+      e('div',{style:{padding:'14px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',fontSize:11,color:'rgba(255,255,255,0.22)'}},'Jun 23, 2026')
+    );
+  }
 
-      // week picker
-      e('div',{style:{marginBottom:16}},
-        e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:8}},'Week'),
-        e('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-          ...this.WEEKS.map(w=>e('button',{key:w.key,onClick:()=>{
-            const ent=this.loadWeekEntries(w.key,entryMember);
-            this.setState({selectedWeek:w.key,hourEntries:ent});
-          },style:{
-            padding:'5px 12px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',
-            border:`1.5px solid ${selectedWeek===w.key?this.NAVY:'#dde4eb'}`,
-            background:selectedWeek===w.key?this.NAVY:'#fff',
-            color:selectedWeek===w.key?'#fff':'#6b7d94',
-            whiteSpace:'nowrap',
-          }},w.shortLabel))
+  /* ══ DASHBOARD ════════════════════════════════════ */
+  buildDashboard(){
+    const{e}=this;
+    const sec=(n,t,s,c)=>e('div',{style:{marginBottom:40}},
+      e('div',{style:{display:'flex',alignItems:'flex-start',gap:12,marginBottom:18}},
+        e('div',{style:{fontSize:10,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:3,minWidth:22}},n),
+        e('div',null,
+          e('h2',{style:{fontSize:17,fontWeight:500,color:this.NAVY,margin:'0 0 3px',letterSpacing:'-0.01em'}},t),
+          e('p',{style:{fontSize:13,color:this.GRAY,margin:0,lineHeight:1.5}},s)
+        )
+      ),c
+    );
+    const hr=e('div',{style:{height:1,background:'#e4e9ef',margin:'0 0 40px'}});
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px 32px'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto'}},
+          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'Portfolio Review'),
+          e('h1',{style:{fontSize:'clamp(24px,4vw,40px)',fontWeight:300,color:'#fff',margin:'0 0 10px',letterSpacing:'-0.02em'}},'Planned, delivered, and what\'s ahead.'),
+          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,maxWidth:480,lineHeight:1.7,fontWeight:300}},'Actual vs. forecast, project phases, and team utilisation. Jun 23, 2026.')
         )
       ),
-
-      e('div',{style:{background:'#f6f8fb',borderRadius:8,padding:'10px 14px',marginBottom:16,fontSize:12,color:this.GRAY}},
-        `Week of ${wk.label} · ${showPlanned?'Edit planned + actual':'Actual hours only (planned not tracked for this week)'}`
+      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 32px'}},this.buildKPIs())
       ),
-
-      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
-        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
-          ...['Project', showPlanned?'Planned (h)':null,'Actual (h)'].filter(Boolean).map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',textAlign:h==='Project'?'left':'right'}},h))
-        )),
-        e('tbody',null,...(ps.length?ps.map(p=>{
-          const ent=hourEntries[p.name]||{planned:'',actual:''};
-          const upd=(field,val)=>this.setState(s=>({hourEntries:{...s.hourEntries,[p.name]:{...s.hourEntries[p.name]||{},[field]:val}}}));
-          return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
-            e('td',{style:{padding:'10px 0',fontSize:13,color:this.NAVY}},
-              e('div',{style:{display:'flex',alignItems:'center',gap:8}},
-                e('div',{style:{width:3,height:16,borderRadius:2,background:this.TC[p.type],flexShrink:0}}),p.name)
-            ),
-            showPlanned&&e('td',{style:{padding:'10px 8px',textAlign:'right'}},
-              e('input',{type:'number',value:ent.planned??'',min:0,step:0.5,onChange:ev=>upd('planned',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:iS})
-            ),
-            e('td',{style:{padding:'10px 0',textAlign:'right'}},
-              e('input',{type:'number',value:ent.actual??'',min:0,step:0.5,placeholder:'—',onChange:ev=>upd('actual',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:{...iS,borderColor:this.BLUE,background:'#f4f8ff'}})
-            )
-          );
-        }):[e('tr',{key:'empty'},e('td',{colSpan:3,style:{padding:'24px 0',textAlign:'center',color:this.GRAY,fontSize:14}},'No active projects for this member'))]))
-      ),
-
-      e('div',{style:{marginTop:20,display:'flex',justifyContent:'flex-end',gap:10}},
-        e('button',{onClick:()=>this.setState({showManage:false}),style:{padding:'8px 16px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
-        e('button',{onClick:()=>{
-          const newLog={...this.state.weeklyLog};
-          Object.entries(this.state.hourEntries).forEach(([name,v])=>{
-            if(v.planned!==''||v.actual!==''){
-              if(!newLog[name])newLog[name]={};
-              newLog[name][selectedWeek]={
-                planned:v.planned!==''?Number(v.planned):null,
-                actual:v.actual!==''?Number(v.actual):null,
-              };
-            }
-          });
-          this.persist({weeklyLog:newLog,showManage:false});
-        },style:{padding:'8px 20px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'Save & update dashboard')
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'36px 32px'}},
+        sec('01','Team allocation','Planned vs. actual hours. Orange segment = PTO logged.',this.buildTeamBars()),hr,
+        sec('02','Active portfolio','Filter by type or owner. Click any row for phase timeline, trend, and comments.',e('div',null,this.buildFilterBar(),this.buildTable())),hr,
+        sec('03','Timeline','Weekly and monthly — historical actuals and forward forecast.',this.buildTimeline()),hr,
+        sec('04','Monthly summary','May and Jun actuals vs. Jun forecast.',this.buildMonthly())
       )
     );
   }
 
-  // ── Projects tab ───────────────────────────────────────────────
-  buildProjectsTab(){
-    const{newProject}=this.state;
-    const members=this.getMembers(),projects=this.getProjects();
-    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff',width:'100%'};
-    const setNP=patch=>this.setState({newProject:{...newProject,...patch}});
-    return e('div',null,
-      e('div',{style:{background:'#f6f8fb',borderRadius:10,padding:'16px',marginBottom:20}},
-        e('div',{style:{fontSize:12,color:this.GRAY,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}},'Add new project'),
-        e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}},
-          e('input',{type:'text',placeholder:'Project name',value:newProject.name,onChange:ev=>setNP({name:ev.target.value}),style:{...iS,gridColumn:'1/-1'}}),
-          e('select',{value:newProject.owner,onChange:ev=>setNP({owner:ev.target.value}),style:iS},...members.map(m=>e('option',{key:m,value:m},m))),
-          e('select',{value:newProject.type,onChange:ev=>setNP({type:ev.target.value}),style:iS},...['Transform','Grow','Run','Agent'].map(t=>e('option',{key:t,value:t},t))),
-          e('select',{value:newProject.status,onChange:ev=>setNP({status:ev.target.value}),style:iS},...['Implementation','Assessment','Support','On Hold','Completed'].map(s=>e('option',{key:s,value:s},s)))
-        ),
-        e('button',{onClick:()=>{
-          if(!newProject.name.trim())return;
-          const np={name:newProject.name.trim(),owner:newProject.owner,type:newProject.type,status:newProject.status,actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]};
-          this.persist({projects:[...this.getProjects(),np],newProject:{name:'',owner:'Sweta',type:'Transform',status:'Implementation'}});
-        },style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add project')
-      ),
-      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
-        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
-          ...['Project','Owner','Type',''].map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
-        )),
-        e('tbody',null,...projects.map(p=>e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
-          e('td',{style:{padding:'11px 0',fontSize:13,color:this.NAVY}},e('div',{style:{display:'flex',alignItems:'center',gap:6}},e('div',{style:{width:3,height:16,borderRadius:2,background:this.TC[p.type],flexShrink:0}}),p.name)),
-          e('td',{style:{padding:'11px 8px',fontSize:12,color:this.GRAY}},p.owner),
-          e('td',{style:{padding:'11px 8px'}},e('span',{style:{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:4,color:this.TC[p.type],background:`${this.TC[p.type]}18`}},p.type)),
-          e('td',{style:{padding:'11px 0',textAlign:'right'}},
-            e('button',{onClick:()=>this.persist({projects:this.getProjects().filter(x=>x.name!==p.name)}),style:{padding:'4px 10px',border:'1px solid #e4e9ef',borderRadius:6,background:'#fff',color:this.GRAY,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Remove')
-          )
-        )))
-      )
-    );
-  }
-
-  // ── Team tab ───────────────────────────────────────────────────
-  buildTeamTab(){
-    const{newMember}=this.state,members=this.getMembers();
-    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff'};
-    return e('div',null,
-      e('div',{style:{background:'#f6f8fb',borderRadius:10,padding:'16px',marginBottom:20}},
-        e('div',{style:{fontSize:12,color:this.GRAY,fontWeight:600,letterSpacing:'0.06em',textTransform:'uppercase',marginBottom:12}},'Add team member'),
-        e('div',{style:{display:'flex',gap:10,marginBottom:12,flexWrap:'wrap'}},
-          e('input',{type:'text',placeholder:'Full name',value:newMember.name,onChange:ev=>this.setState({newMember:{...newMember,name:ev.target.value}}),style:{...iS,flex:'1 1 160px'}}),
-          e('input',{type:'number',placeholder:'Capacity h/wk',value:newMember.capacity,min:1,max:80,onChange:ev=>this.setState({newMember:{...newMember,capacity:parseInt(ev.target.value)||40}}),style:{...iS,width:150}})
-        ),
-        e('button',{onClick:()=>{
-          if(!newMember.name.trim())return;
-          this.persist({members:[...members,newMember.name.trim()],newMember:{name:'',capacity:40}});
-        },style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add member')
-      ),
-      e('table',{style:{width:'100%',borderCollapse:'collapse'}},
-        e('thead',null,e('tr',{style:{borderBottom:'2px solid #e4e9ef'}},
-          ...['Member','Active projects','Capacity',''].map(h=>e('th',{key:h,style:{padding:'8px 0',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
-        )),
-        e('tbody',null,...members.map(m=>{
-          const active=this.getProjects().filter(p=>p.owner===m&&p.status!=='Completed'&&p.status!=='On Hold').length;
-          const cap=(this.OWNER_TOTALS[m]?.planned||[40])[0]+'h / wk';
-          return e('tr',{key:m,style:{borderBottom:'1px solid #f0f4f8'}},
-            e('td',{style:{padding:'12px 0',fontSize:14,fontWeight:500,color:this.NAVY}},m),
-            e('td',{style:{padding:'12px 8px',fontSize:13,color:this.GRAY}},`${active} active`),
-            e('td',{style:{padding:'12px 8px',fontSize:13,color:this.GRAY}},cap),
-            e('td',{style:{padding:'12px 0',textAlign:'right'}},
-              !this.DEFAULT_MEMBERS.includes(m)&&e('button',{onClick:()=>this.persist({members:members.filter(x=>x!==m)}),style:{padding:'4px 10px',border:'1px solid #e4e9ef',borderRadius:6,background:'#fff',color:this.GRAY,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Remove')
-            )
-          );
-        }))
-      )
-    );
-  }
-
-  // ── KPIs ───────────────────────────────────────────────────────
   buildKPIs(){
-    const ps=this.getProjects();
-    const active=ps.filter(p=>p.status!=='Completed'&&p.status!=='On Hold').length;
+    const{e}=this,ps=this.getProjects();
+    const active=ps.filter(p=>!['Completed','On Hold','Archived'].includes(p.status)).length;
     const own4=['Sweta','Jonny','Anil','Saurabh'];
     const tAct=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual[1],0);
     const tPlan=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned[1],0);
     const util=Math.round(tAct/tPlan*100);
     const behind=ps.filter(p=>p.planned4w[1]>0&&p.actual8w[6]<p.planned4w[1]*0.8).length;
-    const kpis=[
-      {v:active,suf:'',label:'Active projects',note:`of ${ps.length} total`},
-      {v:tAct,suf:'h',label:'Hours logged',note:'Jun 8–12 (team)'},
-      {v:util,suf:'%',label:'Delivery rate',note:'vs plan · Jun 8–12',color:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},
-      {v:behind,suf:'',label:'Behind plan',note:'projects under 80%',color:behind<=2?this.NAVY:this.RED},
-    ];
+    const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:tAct,suf:'h',l:'Hours logged',n:'Jun 8–12 (team)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · Jun 8–12',c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
     return e('div',{style:{display:'flex',flexWrap:'wrap'}},
-      ...kpis.map((k,i)=>e('div',{key:k.label,style:{flex:'1 1 160px',padding:'24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
-        e('div',{style:{fontSize:'clamp(36px,4vw,50px)',fontWeight:700,color:k.color||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},`${k.v}${k.suf}`),
-        e('div',{style:{fontSize:13,color:this.NAVY,fontWeight:500,marginTop:7}},k.label),
-        e('div',{style:{fontSize:12,color:this.GRAY,marginTop:3,fontWeight:300}},k.note)
+      ...kpis.map((k,i)=>e('div',{key:k.l,style:{flex:'1 1 140px',padding:'20px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
+        e('div',{style:{fontSize:'clamp(32px,3.5vw,44px)',fontWeight:700,color:k.c||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},k.v+k.suf),
+        e('div',{style:{fontSize:13,color:this.NAVY,fontWeight:500,marginTop:6}},k.l),
+        e('div',{style:{fontSize:11,color:this.GRAY,marginTop:2,fontWeight:300}},k.n)
       ))
     );
   }
 
-  // ── Owner filter pills (shared) ────────────────────────────────
-  buildOwnerPills(compact){
-    const{filterOwner}=this.state;
-    const members=this.getMembers();
-    return e('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
-      ...['All',...members].map(m=>{
-        const a=filterOwner===m;
-        return e('button',{key:m,onClick:()=>this.setState({filterOwner:m}),style:{
-          padding:compact?'3px 10px':'5px 14px',
-          borderRadius:9999,fontSize:compact?12:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',
-          border:`1.5px solid ${a?this.NAVY:'#dde4eb'}`,
-          background:a?this.NAVY:'#fff',
-          color:a?'#fff':'#6b7d94',
-        }},m);
-      })
-    );
-  }
-
-  // ── Team bars (with owner filter dimming) ──────────────────────
   buildTeamBars(){
-    const{filterOwner}=this.state;
-    const MAX=48;
-    const owners=['Sweta','Jonny','Anil','Saurabh','Vinay'];
-    const rows=owners.map(o=>{
+    const{e}=this,MAX=48,{filterOwner}=this.state;
+    const rows=this.DEFAULT_MEMBERS.map(o=>{
       const d=this.OWNER_TOTALS[o],pl=d.planned[1],ac=d.actual[1];
+      const pto=this.getMemberPTO(o,'w_jun12');
+      const effCap=Math.max(0,40-pto);
       const r=pl>0?ac/pl:null,pct=r!==null?Math.round(r*100):null;
       const bc=r===null?'#c4cdd6':r>=0.95?this.GREEN:r>=0.75?this.BLUE:r>=0.5?this.AMBER:this.RED;
-      const dimmed=filterOwner!=='All'&&filterOwner!==o;
-      return e('div',{key:o,style:{marginBottom:18,opacity:dimmed?0.2:1,transition:'opacity 0.15s'}},
-        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:7}},
-          e('div',{style:{display:'flex',alignItems:'center',gap:12}},
-            e('span',{style:{fontSize:14,fontWeight:500,color:this.NAVY,minWidth:70}},o),
-            e('span',{style:{fontSize:12,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},`${ac}h actual · ${pl}h planned`)
+      const dim=filterOwner!=='All'&&filterOwner!==o;
+      return e('div',{key:o,style:{marginBottom:18,opacity:dim?0.3:1,transition:'opacity 0.2s'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:6}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:10}},
+            e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY,minWidth:68}},o),
+            e('span',{style:{fontSize:11,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},ac+'h actual · '+pl+'h planned'),
+            pto>0&&e('span',{style:{fontSize:10,color:this.AMBER,background:'#fff8ec',padding:'1px 5px',borderRadius:3,fontWeight:500}},pto+'h PTO')
           ),
-          pct!==null&&e('span',{style:{fontSize:13,fontWeight:600,color:bc,fontVariantNumeric:'tabular-nums'}},`${pct}%`)
+          pct!==null&&e('span',{style:{fontSize:12,fontWeight:600,color:bc,fontVariantNumeric:'tabular-nums'}},pct+'%')
         ),
-        e('div',{style:{position:'relative',height:10,background:'#e4e9ef',borderRadius:5,overflow:'visible'}},
-          e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:`${Math.min(pl/MAX*100,100)}%`,background:'#c4d8ec',borderRadius:5}}),
-          ac>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:`${Math.min(ac/MAX*100,125)}%`,background:bc,borderRadius:5}}),
-          e('div',{style:{position:'absolute',top:-3,left:`${40/MAX*100}%`,width:1,height:16,background:'#9aaabb',opacity:0.4}})
+        e('div',{style:{position:'relative',height:9,background:'#e4e9ef',borderRadius:5,overflow:'hidden'}},
+          pto>0&&e('div',{style:{position:'absolute',top:0,right:0,height:'100%',width:(pto/MAX*100)+'%',background:'#f5d8a0',zIndex:1}}),
+          e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(pl/MAX*100,100)+'%',background:'#c4d8ec'}}),
+          ac>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(ac/MAX*100,125)+'%',background:bc,zIndex:2}}),
+          e('div',{style:{position:'absolute',top:0,left:(40/MAX*100)+'%',width:1,height:'100%',background:'rgba(0,0,0,0.15)',zIndex:3}})
         ),
-        ac>40&&e('div',{style:{fontSize:11,color:this.GREEN,marginTop:4,fontWeight:500}},`+${ac-40}h above capacity`)
+        ac>effCap&&effCap>0&&e('div',{style:{fontSize:10,color:this.GREEN,marginTop:3,fontWeight:500}},'+'+( ac-effCap)+'h above effective capacity')
       );
     });
     return e('div',null,...rows,
-      e('div',{style:{display:'flex',gap:20,paddingTop:18,borderTop:'1px solid #e4e9ef',marginTop:4,flexWrap:'wrap'}},
-        ...[['#c4d8ec','Planned'],['#4778a8','Actual'],['#9aaabb','40h capacity']].map(([c,l])=>
-          e('div',{key:l,style:{display:'flex',alignItems:'center',gap:6}},
-            e('div',{style:{width:12,height:6,borderRadius:3,background:c}}),
-            e('span',{style:{fontSize:12,color:this.GRAY}},l)
+      e('div',{style:{display:'flex',gap:16,paddingTop:14,borderTop:'1px solid #e4e9ef',marginTop:4,flexWrap:'wrap'}},
+        ...([['#c4d8ec','Planned'],['#4778a8','Actual'],['#f5d8a0','PTO'],['#9aaabb','40h cap']]).map(([c,l])=>
+          e('div',{key:l,style:{display:'flex',alignItems:'center',gap:5}},
+            e('div',{style:{width:10,height:5,borderRadius:2,background:c}}),
+            e('span',{style:{fontSize:11,color:this.GRAY}},l)
           )
         )
       )
     );
   }
 
-  // ── Filter bar (type + owner) ──────────────────────────────────
   buildFilterBar(){
-    const{filterType}=this.state,ps=this.getProjects();
-    return e('div',{style:{marginBottom:18}},
-      e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',marginBottom:8}},
+    const{e}=this,{filterType,filterOwner}=this.state,ps=this.filtered();
+    return e('div',{style:{display:'flex',gap:10,flexWrap:'wrap',marginBottom:16,alignItems:'center'}},
+      e('div',{style:{display:'flex',gap:4,alignItems:'center',flexWrap:'wrap'}},
+        e('span',{style:{fontSize:10,color:'#bbc4cf',fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginRight:2}},'Type'),
         ...['All','Transform','Grow','Run','Agent'].map(t=>{
           const a=filterType===t,c=this.TC[t]||this.NAVY;
-          const cnt=t==='All'?ps.length:ps.filter(p=>p.type===t).length;
-          return e('button',{key:t,onClick:()=>this.setState({filterType:t}),style:{padding:'5px 14px',borderRadius:9999,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:`1.5px solid ${a?c:'#dde4eb'}`,background:a?c:'#fff',color:a?'#fff':'#6b7d94'}},`${t} (${cnt})`);
+          return e('button',{key:t,onClick:()=>this.setState({filterType:t}),style:{padding:'4px 10px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(a?c:'#dde4eb'),background:a?c:'#fff',color:a?'#fff':'#6b7d94'}},(t==='All'?'All':t)+' ('+(t==='All'?ps.length:this.getProjects().filter(p=>p.type===t&&!['Completed','Archived'].includes(p.status)).length)+')');
         })
       ),
-      e('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}},
-        e('span',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',flexShrink:0}},'Owner'),
-        this.buildOwnerPills(true)
+      e('div',{style:{width:1,height:20,background:'#e4e9ef',flexShrink:0}}),
+      e('div',{style:{display:'flex',gap:4,alignItems:'center',flexWrap:'wrap'}},
+        e('span',{style:{fontSize:10,color:'#bbc4cf',fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginRight:2}},'Owner'),
+        ...['All',...this.getMembers()].map(o=>{
+          const a=filterOwner===o;
+          return e('button',{key:o,onClick:()=>this.setState({filterOwner:o}),style:{padding:'4px 10px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(a?this.BLUE:'#dde4eb'),background:a?this.BLUE:'#fff',color:a?'#fff':'#6b7d94'}},o);
+        })
       )
     );
   }
 
-  // ── Sparkline ──────────────────────────────────────────────────
   sparkline(p){
     const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:0,fc:true}];
     const mx=Math.max(1,...G.map(g=>Math.max(g.pl,g.ac)));
-    const W=76,H=24,bW=17,gap=2;
+    const W=72,H=22,bW=16,gap=2;
     const rects=G.flatMap((g,i)=>{
       const x=i*(bW+gap),pH=g.pl>0?Math.max(2,(g.pl/mx)*(H-2)):0,aH=g.ac>0?Math.max(2,(g.ac/mx)*(H-2)):0;
       const r=g.pl>0&&!g.fc?g.ac/g.pl:null,ac=g.fc?'#c4d8ec':r===null?'#d4dce6':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
-      return[pH>0&&React.createElement('rect',{key:`p${i}`,x,y:H-pH,width:bW,height:pH,fill:'#e4e9ef',rx:1}),aH>0&&React.createElement('rect',{key:`a${i}`,x,y:H-aH,width:bW,height:aH,fill:ac,rx:1})].filter(Boolean);
+      return[pH>0&&React.createElement('rect',{key:'p'+i,x,y:H-pH,width:bW,height:pH,fill:'#e4e9ef',rx:1}),aH>0&&React.createElement('rect',{key:'a'+i,x,y:H-aH,width:bW,height:aH,fill:ac,rx:1})].filter(Boolean);
     });
     return React.createElement('svg',{width:W,height:H,style:{flexShrink:0}},...rects);
   }
 
-  // ── Projects table ─────────────────────────────────────────────
   buildTable(){
-    const{expandedProject}=this.state,ps=this.filtered();
+    const{e}=this,{expandedProject}=this.state,ps=this.filtered();
     const thead=e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
-      ...['Project','Owner','Type','Status','Plan','Actual','Var','Trend'].map(h=>e('th',{key:h,style:{padding:'10px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Plan','Actual','Var'].includes(h)?'right':'left'}},h))
+      ...['Project','Owner','Phase','Plan','Actual','Var','Trend'].map(h=>e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Plan','Actual','Var'].includes(h)?'right':'left'}},h))
     ));
     const rows=ps.flatMap(p=>{
       const isExp=expandedProject===p.name,pl=p.planned4w[1],ac=p.actual8w[6];
-      const vari=pl>0?ac-pl:null,ss=this.SS[p.status]||{dot:this.GRAY,color:this.GRAY},tc=this.TC[p.type]||this.BLUE;
-      const row=e('tr',{key:p.name,onClick:()=>this.setState({expandedProject:isExp?null:p.name}),onMouseEnter:ev=>{ev.currentTarget.style.background='#f0f4fa';},onMouseLeave:ev=>{ev.currentTarget.style.background=isExp?'#f4f7fb':'';},style:{cursor:'pointer',background:isExp?'#f4f7fb':'',borderBottom:'1px solid #e4e9ef',transition:'background 0.1s'}},
-        e('td',{style:{padding:'13px 12px',maxWidth:220}},e('div',{style:{display:'flex',alignItems:'center',gap:8}},e('div',{style:{width:3,height:18,borderRadius:2,background:tc,flexShrink:0}}),e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY,lineHeight:1.3}},p.name))),
-        e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
-        e('td',{style:{padding:'13px 12px'}},e('span',{style:{fontSize:11,fontWeight:600,padding:'2px 8px',borderRadius:4,color:tc,background:`${tc}18`}},p.type)),
-        e('td',{style:{padding:'13px 12px'}},e('div',{style:{display:'flex',alignItems:'center',gap:6}},e('div',{style:{width:6,height:6,borderRadius:'50%',background:ss.dot,flexShrink:0}}),e('span',{style:{fontSize:12,color:ss.color,whiteSpace:'nowrap'}},p.status))),
-        e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},pl>0?`${pl}h`:'—'),
-        e('td',{style:{padding:'13px 12px',fontSize:13,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},ac>0?`${ac}h`:'—'),
-        e('td',{style:{padding:'13px 12px',textAlign:'right'}},vari!==null&&vari!==0?e('span',{style:{fontSize:12,fontWeight:500,color:this.vc(vari)}},`${vari>0?'+':''}${vari}h`):e('span',{style:{color:'#dde4eb',fontSize:12}},'—')),
-        e('td',{style:{padding:'11px 12px 11px 8px'}},this.sparkline(p))
+      const vari=pl>0?ac-pl:null,tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
+      const blockers=this.getBlockers(p.name);
+      const row=e('tr',{key:p.name,onClick:()=>this.setState({expandedProject:isExp?null:p.name}),onMouseEnter:ev=>{ev.currentTarget.style.background='#f0f4fa';},onMouseLeave:ev=>{ev.currentTarget.style.background=isExp?'#f4f7fb':'';},style:{cursor:'pointer',background:isExp?'#f4f7fb':'',borderBottom:'1px solid #e4e9ef'}},
+        e('td',{style:{padding:'11px 10px'}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:7}},
+            e('div',{style:{width:3,height:16,borderRadius:2,background:tc,flexShrink:0}}),
+            e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY,lineHeight:1.3}},p.name),
+            blockers.length>0&&e('div',{style:{width:7,height:7,borderRadius:'50%',background:this.RED,flexShrink:0,marginLeft:2}})
+          )
+        ),
+        e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+        e('td',{style:{padding:'11px 10px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
+        e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},pl>0?pl+'h':'—'),
+        e('td',{style:{padding:'11px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},ac>0?ac+'h':'—'),
+        e('td',{style:{padding:'11px 10px',textAlign:'right'}},vari!==null&&vari!==0?e('span',{style:{fontSize:11,fontWeight:500,color:this.vc(vari)}},(vari>0?'+':'')+vari+'h'):e('span',{style:{color:'#dde4eb',fontSize:11}},'—')),
+        e('td',{style:{padding:'9px 10px 9px 6px'}},this.sparkline(p))
       );
-      const det=isExp&&e('tr',{key:`${p.name}-d`},e('td',{colSpan:8,style:{padding:0,background:'#f4f7fb',borderBottom:'1px solid #dde4eb'}},this.buildDetail(p)));
+      const det=isExp&&e('tr',{key:p.name+'-d'},e('td',{colSpan:7,style:{padding:0,background:'#f4f7fb',borderBottom:'1px solid #dde4eb'}},this.buildDetail(p)));
       return[row,det].filter(Boolean);
     });
     return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
-      e('table',{style:{width:'100%',minWidth:640,borderCollapse:'collapse'}},thead,e('tbody',null,...rows))
+      e('table',{style:{width:'100%',minWidth:600,borderCollapse:'collapse'}},thead,e('tbody',null,...rows))
     );
   }
 
-  // ── Project detail ─────────────────────────────────────────────
   buildDetail(p){
+    const{e}=this;
     const WL=['May 1','May 8','May 15','May 22','May 29','Jun 5','Jun 12','Jun 19'];
-    const all=[...p.actual8w.map((a,i)=>({label:WL[i],actual:a,planned:i>=5?p.planned4w[i-5]:null,fc:false})),{label:'Jun 22',planned:p.planned4w[3],actual:null,fc:true},{label:'Jun 29',planned:p.forecast[0],actual:null,fc:true},{label:'Jul 6',planned:p.forecast[1],actual:null,fc:true}];
-    const mx=Math.max(1,...all.map(d=>Math.max(d.planned||0,d.actual||0)));
-    const CH=80,N=all.length,BW=22,totalAct=p.actual8w.reduce((s,v)=>s+v,0);
-    const nz=p.actual8w.filter(v=>v>0).length,avg=nz>0?(totalAct/nz).toFixed(1):'0';
-    return e('div',{style:{padding:'20px 24px 24px',display:'flex',gap:28,flexWrap:'wrap',animation:'slideDown 0.15s ease-out'}},
-      e('div',{style:{flex:'1 1 300px',minWidth:0}},
-        e('div',{style:{fontSize:10,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.08em',fontWeight:600,marginBottom:8}},'8-week trend + forecast'),
-        React.createElement('svg',{viewBox:`0 0 ${N*BW} ${CH+20}`,style:{width:'100%',height:'auto',display:'block',maxHeight:CH+20}},
-          ...all.map((d,i)=>{
-            const x=i*BW,bw=BW-3,pH=d.planned>0?Math.max(3,(d.planned/mx)*(CH-4)):0,aH=d.actual>0?Math.max(3,(d.actual/mx)*(CH-4)):0;
-            const r=d.planned&&d.actual!=null?d.actual/d.planned:null,ac=d.fc?'#c4d8ec':r===null?'#c4d8ec':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
-            return[
-              pH>0&&React.createElement('rect',{key:`p${i}`,x,y:CH-pH,width:bw,height:pH,fill:d.fc?'#ddeef9':'#dde9f4',rx:1}),
-              aH>0&&React.createElement('rect',{key:`a${i}`,x,y:CH-aH,width:bw,height:aH,fill:ac,rx:1}),
-              React.createElement('text',{key:`l${i}`,x:x+bw/2,y:CH+14,textAnchor:'middle',fontSize:7,fill:d.fc?'#c4cdd6':this.GRAY,style:{fontFamily:'inherit'}},d.label.split(' ')[1]||d.label.split(' ')[0]),
-            ].filter(Boolean);
-          }).flat()
+    const pts=[...p.actual8w.map((a,i)=>({label:WL[i],actual:a,planned:i>=5?p.planned4w[i-5]:null,fc:false})),
+      {label:'Jun 22',planned:p.planned4w[3],actual:null,fc:true},
+      {label:'Jun 29',planned:p.forecast[0],actual:null,fc:true},
+      {label:'Jul 6', planned:p.forecast[1],actual:null,fc:true}];
+    const mx=Math.max(1,...pts.map(d=>Math.max(d.planned||0,d.actual||0)));
+    const CH=68,N=pts.length,BW=22;
+    const ML=['J','F','M','A','M','J','J','A','S'];
+
+    // Phase gantt (if phases exist)
+    let phGantt=null;
+    if(p.phases&&p.phases.length>0){
+      const bars=p.phases.map((ph,i)=>{
+        const c=this.PC[ph.name]||this.GRAY;
+        const l=(ph.startMonth/9*100)+'%';
+        const w=((ph.endMonth-ph.startMonth+1)/9*100)+'%';
+        return e('div',{key:i,style:{position:'absolute',top:0,height:20,left:l,width:w,background:c,borderRadius:3,display:'flex',alignItems:'center',padding:'0 5px',overflow:'hidden'}},
+          e('span',{style:{fontSize:8,color:'#fff',fontWeight:600,whiteSpace:'nowrap'}},ph.name+(ph.hpw>0?' '+ph.hpw+'h/w':''))
+        );
+      });
+      const nowLine=e('div',{style:{position:'absolute',top:-1,left:(5/9*100)+'%',width:2,height:22,background:this.NAVY,opacity:0.5,borderRadius:1}});
+      const mLabels=ML.map((m,i)=>e('div',{key:m+i,style:{flex:'1 1 0',textAlign:'center',fontSize:7,color:i===5?this.BLUE:'#c4cdd6'}},m));
+      phGantt=e('div',{style:{marginBottom:10}},
+        e('div',{style:{fontSize:9,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:4}},'Phase timeline (Jan–Sep 2026)'),
+        e('div',{style:{position:'relative',height:22}},...bars,nowLine),
+        e('div',{style:{display:'flex',marginTop:2}},...mLabels)
+      );
+    }
+
+    // Trend SVG bars
+    const svgBars=pts.map((d,i)=>{
+      const x=i*BW,bw=BW-3;
+      const pH=d.planned>0?Math.max(2,(d.planned/mx)*(CH-3)):0;
+      const aH=d.actual>0?Math.max(2,(d.actual/mx)*(CH-3)):0;
+      const r=d.planned&&d.actual!=null?d.actual/d.planned:null;
+      const fill=d.fc?'#c4d8ec':r===null?'#c4d8ec':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
+      const wkLabel=d.label.split(' ')[1]||d.label.split(' ')[0];
+      const els=[];
+      if(pH>0)els.push(React.createElement('rect',{key:'p'+i,x,y:CH-pH,width:bw,height:pH,fill:d.fc?'#ddeef9':'#dde9f4',rx:1}));
+      if(aH>0)els.push(React.createElement('rect',{key:'a'+i,x,y:CH-aH,width:bw,height:aH,fill,rx:1}));
+      els.push(React.createElement('text',{key:'l'+i,x:x+bw/2,y:CH+12,textAnchor:'middle',fontSize:6.5,fill:d.fc?'#c4cdd6':this.GRAY,style:{fontFamily:'inherit'}},wkLabel));
+      return els;
+    }).flat();
+
+    // Stats
+    const tot=p.actual8w.reduce((s,v)=>s+v,0);
+    const statsData=[['Type',p.type,this.TC[p.type]],['Owner',p.owner,null],['Phase',p.currentPhase,this.PC[p.currentPhase]],['8-wk total',tot+'h',null],['Estimated',p.phases?'~'+Math.round(this.estTotal(p.phases))+'h':'—',null],['Forecast W0',p.planned4w[3]>0?p.planned4w[3]+'h':'—',null]];
+    const statsGrid=e('div',{style:{flexShrink:0,minWidth:150,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 16px',alignContent:'start'}},
+      ...statsData.map(([l,v,c])=>e('div',{key:l},
+        e('div',{style:{fontSize:9,color:'#bbc4cf',textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:2}},l),
+        e('div',{style:{fontSize:13,fontWeight:500,color:c||this.NAVY}},v||'—')
+      ))
+    );
+
+    return e('div',{style:{animation:'slideDown 0.15s ease-out'}},
+      e('div',{style:{padding:'16px 20px 12px',display:'flex',gap:24,flexWrap:'wrap'}},
+        e('div',{style:{flex:'1 1 280px',minWidth:0}},
+          phGantt,
+          e('div',{style:{fontSize:9,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:6}},'8-week trend + forecast'),
+          React.createElement('svg',{viewBox:'0 0 '+(N*BW)+' '+(CH+18),style:{width:'100%',height:'auto',display:'block',maxHeight:CH+18}},...svgBars)
+        ),
+        statsGrid
+      ),
+      this.buildComments(p)
+    );
+  }
+
+  buildComments(p){
+    const{e}=this,{projectComments,commentForm}=this.state;
+    const comments=projectComments[p.name]||[];
+    const activeB=comments.filter(c=>c.isBlocker&&!c.resolved);
+    const iS={padding:'7px 10px',border:'1px solid #dde4eb',borderRadius:6,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff'};
+
+    const feed=comments.length>0?e('div',{style:{display:'flex',flexDirection:'column',gap:6,marginBottom:12}},
+      ...comments.map(c=>{
+        const act=c.isBlocker&&!c.resolved;
+        return e('div',{key:c.id,style:{background:act?'#fff8f8':'#f6f8fb',borderRadius:6,padding:'8px 12px',border:'1px solid '+(act?'#fde8ec':'transparent')}},
+          e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:3}},
+            e('div',{style:{display:'flex',alignItems:'center',gap:6}},
+              e('div',{style:{width:20,height:20,borderRadius:'50%',background:this.BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                e('span',{style:{fontSize:8,color:'#fff',fontWeight:700}},c.author.substring(0,1))
+              ),
+              e('span',{style:{fontSize:12,fontWeight:500,color:this.NAVY}},c.author),
+              act&&e('span',{style:{fontSize:9,padding:'1px 5px',borderRadius:3,background:this.RED,color:'#fff',fontWeight:600}},'Blocker'),
+              c.resolved&&e('span',{style:{fontSize:9,padding:'1px 5px',borderRadius:3,background:'#e8f5ef',color:this.GREEN,fontWeight:600}},'Resolved')
+            ),
+            e('div',{style:{display:'flex',alignItems:'center',gap:8}},
+              e('span',{style:{fontSize:10,color:'#bbc4cf'}},c.ts),
+              act&&e('button',{onClick:ev=>{ev.stopPropagation();this.resolveComment(p.name,c.id);},style:{padding:'2px 7px',border:'1px solid '+this.GREEN,borderRadius:4,background:'#fff',color:this.GREEN,fontSize:10,cursor:'pointer',fontFamily:'inherit'}},'Resolve')
+            )
+          ),
+          e('div',{style:{fontSize:13,color:'#3d4f62',lineHeight:1.5,paddingLeft:26}},c.text)
+        );
+      })
+    ):null;
+
+    return e('div',{style:{padding:'12px 20px 16px',borderTop:'1px solid #f0f4f8'}},
+      e('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+        e('span',{style:{fontSize:11,fontWeight:600,color:this.NAVY,textTransform:'uppercase',letterSpacing:'0.07em'}},'Comments & Blockers'),
+        activeB.length>0&&e('span',{style:{fontSize:10,padding:'2px 6px',borderRadius:9999,background:'#fde8ec',color:this.RED,fontWeight:600}},activeB.length+' active blocker'+(activeB.length>1?'s':''))
+      ),
+      feed,
+      e('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}},
+        e('select',{value:commentForm.author,onChange:ev=>this.setState({commentForm:{...commentForm,author:ev.target.value}}),style:{...iS,width:96}},
+          ...this.getMembers().map(m=>e('option',{key:m,value:m},m))
+        ),
+        e('input',{type:'text',placeholder:'Add comment or blocker...',value:commentForm.text,onChange:ev=>this.setState({commentForm:{...commentForm,text:ev.target.value}}),onKeyDown:ev=>{if(ev.key==='Enter'){ev.preventDefault();this.addComment(p.name);}},style:{...iS,flex:'1 1 200px',minWidth:0}}),
+        e('label',{style:{display:'flex',alignItems:'center',gap:4,fontSize:12,color:commentForm.isBlocker?this.RED:'#6b7d94',cursor:'pointer',whiteSpace:'nowrap',userSelect:'none'}},
+          e('input',{type:'checkbox',checked:commentForm.isBlocker,onChange:ev=>this.setState({commentForm:{...this.state.commentForm,isBlocker:ev.target.checked}}),style:{accentColor:this.RED}}),
+          'Blocker'
+        ),
+        e('button',{onClick:()=>this.addComment(p.name),style:{padding:'7px 14px',border:'none',borderRadius:6,background:this.BLUE,color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'Add')
+      )
+    );
+  }
+
+  /* ── Timeline ──────────────────────────────────── */
+  buildTimeline(){
+    const{e}=this,{timelineView}=this.state;
+    return e('div',null,
+      e('div',{style:{display:'flex',gap:5,marginBottom:16,alignItems:'center'}},
+        ...['monthly','weekly'].map(v=>e('button',{key:v,onClick:()=>this.setState({timelineView:v}),style:{padding:'5px 14px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(timelineView===v?this.BLUE:'#dde4eb'),background:timelineView===v?this.BLUE:'#fff',color:timelineView===v?'#fff':'#6b7d94'}},v==='monthly'?'Month view':'Week view')),
+        e('div',{style:{marginLeft:8,display:'flex',gap:10,flexWrap:'wrap'}},
+          ...Object.entries(this.PC).map(([n,c])=>e('div',{key:n,style:{display:'flex',alignItems:'center',gap:3}},e('div',{style:{width:7,height:7,borderRadius:2,background:c}}),e('span',{style:{fontSize:10,color:this.GRAY}},n)))
         )
       ),
-      e('div',{style:{flexShrink:0,minWidth:160,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px 20px',alignContent:'start'}},
-        ...[['Type',p.type,this.TC[p.type]],['Owner',p.owner,null],['Status',p.status,null],['8-wk total',`${totalAct}h`,null],['Weekly avg',`${avg}h/wk`,null],['W0 forecast',p.planned4w[3]>0?`${p.planned4w[3]}h`:'—',null]].map(([l,v,c])=>
-          e('div',{key:l},e('div',{style:{fontSize:10,color:'#bbc4cf',textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:2}},l),e('div',{style:{fontSize:13,fontWeight:500,color:c||this.NAVY}},v))
+      timelineView==='monthly'?this.buildMonthlyTimeline():this.buildWeeklyTimeline()
+    );
+  }
+
+  getProjectWeekData(p,w){
+    let actual=null,planned=null;
+    if(w.actualIdx!==null&&w.actualIdx!==undefined){const r=p.actual8w[w.actualIdx];actual=r>0?r:null;}
+    if(w.current){const log=this.state.weeklyLog[p.name]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
+    else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
+    else if(w.isFuture&&w.forecastIdx!==null)planned=p.forecast[w.forecastIdx]||0;
+    const phase=p.phases?p.phases.find(ph=>w.month>=ph.startMonth&&w.month<=ph.endMonth):null;
+    return{actual,planned,phase,isFuture:w.isFuture};
+  }
+  getProjectMonthData(p,m){
+    let actual=0,planned=0;
+    if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
+    else if(m.month===5){actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);const w0=this.state.weeklyLog[p.name]?.['w_jun26'];if(w0?.actual!=null)actual+=w0.actual;planned=p.planned4w.reduce((s,v)=>s+v,0);}
+    else if(m.month===6)planned=(p.forecast[0]||0)*4;
+    else if(m.month===7)planned=(p.forecast[1]||0)*4;
+    else if(m.month===8)planned=(p.forecast[2]||0)*4;
+    const phase=p.phases?p.phases.find(ph=>m.month>=ph.startMonth&&m.month<=ph.endMonth):null;
+    return{actual,planned,phase,isFuture:m.isFuture};
+  }
+
+  buildMonthlyTimeline(){
+    const{e}=this,ps=this.filtered();
+    const CELL_H=40,BAR_MAX=30,REF=40;
+    const hdr=this.MONTHS.map(m=>e('div',{key:m.id,style:{flex:'1 1 72px',minWidth:64,textAlign:'center',padding:'7px 4px',fontSize:11,fontWeight:600,color:m.isFuture?'#bbc4cf':this.NAVY,background:m.id==='jun'?'#f0f5ff':m.isFuture?'#fafbfc':'transparent',borderLeft:'1px solid #e4e9ef'}},
+      m.label,e('div',{style:{fontSize:8,color:'#bbc4cf',marginTop:1}},m.isFuture?'Forecast':'Actual')
+    ));
+    const rows=ps.map(p=>{
+      const tc=this.TC[p.type]||this.BLUE;
+      const cp=p.phases?p.phases.find(ph=>ph.startMonth<=5&&ph.endMonth>=5):null;
+      const cells=this.MONTHS.map(m=>{
+        const d=this.getProjectMonthData(p,m);
+        const phc=d.phase?(this.PC[d.phase.name]||this.BLUE):(m.isFuture?'#c4d8ec':this.GRAY);
+        const pH=d.planned>0?Math.min(d.planned/REF*BAR_MAX,BAR_MAX):0;
+        const aH=d.actual>0?Math.min(d.actual/REF*BAR_MAX,BAR_MAX):0;
+        const ratio=d.planned>0&&d.actual>0?d.actual/d.planned:null;
+        const aColor=m.isFuture?phc+'70':ratio===null?phc:ratio>=0.9?this.GREEN:ratio>=0.6?this.AMBER:this.RED;
+        const lbl=m.isFuture?(d.planned>0?'~'+Math.round(d.planned)+'h':''):(d.actual>0?d.actual+'h':'');
+        return e('div',{key:m.id,style:{flex:'1 1 72px',minWidth:64,height:CELL_H,position:'relative',display:'flex',alignItems:'flex-end',padding:'3px',background:m.id==='jun'?'#f4f8ff':m.isFuture?'#fafbfc':'#f6f8fb',borderLeft:'1px solid #e4e9ef'}},
+          pH>0&&e('div',{style:{position:'absolute',bottom:3,left:'22%',width:'56%',height:pH+'px',background:m.isFuture?phc+'22':'#dde9f4',borderRadius:'2px 2px 0 0'}}),
+          aH>0&&e('div',{style:{position:'absolute',bottom:3,left:'22%',width:'56%',height:aH+'px',background:aColor,borderRadius:'2px 2px 0 0'}}),
+          lbl&&e('div',{style:{position:'absolute',top:2,left:0,right:0,textAlign:'center',fontSize:8,color:'#9aaabb',fontVariantNumeric:'tabular-nums'}},lbl)
+        );
+      });
+      return e('div',{key:p.name,style:{display:'flex',alignItems:'stretch',borderBottom:'1px solid #f0f4f8',minHeight:CELL_H}},
+        e('div',{style:{width:180,flexShrink:0,display:'flex',alignItems:'center',gap:7,padding:'7px 10px'}},
+          e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),
+          e('div',null,
+            e('div',{style:{fontSize:11,fontWeight:500,color:this.NAVY,lineHeight:1.3}},p.name),
+            cp&&e('div',{style:{fontSize:9,color:this.PC[cp.name]||this.GRAY,marginTop:1}},cp.name)
+          )
+        ),
+        ...cells
+      );
+    });
+    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'hidden'}},
+      e('div',{style:{overflowX:'auto'}},
+        e('div',{style:{minWidth:500}},
+          e('div',{style:{display:'flex',borderBottom:'2px solid #e4e9ef',background:'#f6f8fb'}},
+            e('div',{style:{width:180,flexShrink:0,padding:'7px 10px',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Project'),
+            ...hdr
+          ),
+          ...rows
+        )
+      ),
+      e('div',{style:{padding:'8px 14px',borderTop:'1px solid #f0f4f8',fontSize:10,color:'#bbc4cf'}},'Jun = weeks ending Jun 5–26 · Jul–Sep = current weekly rate × 4 weeks')
+    );
+  }
+
+  buildWeeklyTimeline(){
+    const{e}=this,{timelineOffset}=this.state,ps=this.filtered();
+    const CELL_H=40,BAR_MAX=30,REF=12;
+    const vis=this.ALL_WEEKS.slice(timelineOffset,timelineOffset+12);
+    const canPrev=timelineOffset>0,canNext=timelineOffset+12<this.ALL_WEEKS.length;
+    const hdr=vis.map(w=>e('div',{key:w.id,style:{flex:'1 1 48px',minWidth:42,textAlign:'center',padding:'5px 2px',fontSize:9,color:w.current?this.BLUE:w.isFuture?'#bbc4cf':'#6b7d94',fontWeight:w.current?600:400,background:w.current?'#f0f5ff':w.isFuture?'#fafbfc':'transparent',borderLeft:'1px solid #e4e9ef'}},w.short,e('div',{style:{fontSize:7,color:'#c4cdd6',marginTop:1}},w.isFuture?'fcst':w.current?'now':'')));
+    const rows=ps.map(p=>{
+      const tc=this.TC[p.type]||this.BLUE;
+      const cp=p.phases?p.phases.find(ph=>ph.startMonth<=5&&ph.endMonth>=5):null;
+      const cells=vis.map(w=>{
+        const d=this.getProjectWeekData(p,w);
+        const phc=d.phase?(this.PC[d.phase.name]||this.BLUE):(w.isFuture?'#c4d8ec':this.GRAY);
+        const pH=d.planned>0?Math.min(d.planned/REF*BAR_MAX,BAR_MAX):0;
+        const aH=d.actual>0?Math.min(d.actual/REF*BAR_MAX,BAR_MAX):0;
+        const ratio=d.planned>0&&d.actual!=null&&d.actual>0?d.actual/d.planned:null;
+        const aColor=w.isFuture?phc+'70':ratio===null?phc:ratio>=0.9?this.GREEN:ratio>=0.6?this.AMBER:this.RED;
+        const lbl=w.isFuture?(d.planned>0?d.planned+'h':''):(d.actual>0?d.actual+'h':'');
+        return e('div',{key:w.id,style:{flex:'1 1 48px',minWidth:42,height:CELL_H,position:'relative',display:'flex',alignItems:'flex-end',padding:'3px',background:w.current?'#f0f5ff':w.isFuture?'#fafbfc':'#f6f8fb',borderLeft:'1px solid #e4e9ef'}},
+          pH>0&&e('div',{style:{position:'absolute',bottom:3,left:'16%',width:'68%',height:pH+'px',background:w.isFuture?phc+'22':'#dde9f4',borderRadius:'2px 2px 0 0'}}),
+          aH>0&&e('div',{style:{position:'absolute',bottom:3,left:'16%',width:'68%',height:aH+'px',background:aColor,borderRadius:'2px 2px 0 0'}}),
+          lbl&&e('div',{style:{position:'absolute',top:2,left:0,right:0,textAlign:'center',fontSize:7.5,color:'#9aaabb',fontVariantNumeric:'tabular-nums'}},lbl)
+        );
+      });
+      return e('div',{key:p.name,style:{display:'flex',alignItems:'stretch',borderBottom:'1px solid #f0f4f8'}},
+        e('div',{style:{width:180,flexShrink:0,display:'flex',alignItems:'center',gap:7,padding:'7px 10px'}},
+          e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),
+          e('div',null,
+            e('div',{style:{fontSize:11,fontWeight:500,color:this.NAVY,lineHeight:1.3}},p.name),
+            cp&&e('div',{style:{fontSize:9,color:this.PC[cp.name]||this.GRAY,marginTop:1}},cp.name)
+          )
+        ),
+        ...cells
+      );
+    });
+    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'hidden'}},
+      e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 12px',borderBottom:'1px solid #f0f4f8',background:'#f6f8fb'}},
+        e('button',{onClick:()=>{if(canPrev)this.setState({timelineOffset:timelineOffset-4});},disabled:!canPrev,style:{padding:'4px 10px',border:'1px solid #dde4eb',borderRadius:6,background:canPrev?'#fff':'#f6f8fb',color:canPrev?this.NAVY:'#bbc4cf',fontSize:12,cursor:canPrev?'pointer':'default',fontFamily:'inherit'}},'← Earlier'),
+        e('span',{style:{fontSize:11,color:this.GRAY}},vis[0]?.short+' → '+vis[vis.length-1]?.short),
+        e('button',{onClick:()=>{if(canNext)this.setState({timelineOffset:timelineOffset+4});},disabled:!canNext,style:{padding:'4px 10px',border:'1px solid #dde4eb',borderRadius:6,background:canNext?'#fff':'#f6f8fb',color:canNext?this.NAVY:'#bbc4cf',fontSize:12,cursor:canNext?'pointer':'default',fontFamily:'inherit'}},'Later →')
+      ),
+      e('div',{style:{overflowX:'auto'}},
+        e('div',{style:{minWidth:540}},
+          e('div',{style:{display:'flex',borderBottom:'2px solid #e4e9ef'}},
+            e('div',{style:{width:180,flexShrink:0,padding:'7px 10px',fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Project'),
+            ...hdr
+          ),
+          ...rows
         )
       )
     );
   }
 
-  // ── Weekly chart ───────────────────────────────────────────────
-  buildWeekly(){
-    const owners=['Sweta','Jonny','Anil','Saurabh','Vinay'];
-    const wks=[{label:'Jun 1–5'},{label:'Jun 8–12'},{label:'Jun 15–19 *'},{label:'Jun 22–26 ▶'}].map((w,wi)=>({...w,planned:owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned[wi],0),actual:owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual[wi],0)}));
-    const mx=Math.max(...wks.map(w=>Math.max(w.planned,w.actual)));
-    const CH=140,BW=46,GAP=6,GRP=BW*2+GAP,SPC=22,VW=wks.length*(GRP+SPC);
-    const bars=wks.map((w,i)=>{
-      const x=i*(GRP+SPC),pH=Math.max(4,(w.planned/mx)*CH),aH=w.actual>0?Math.max(4,(w.actual/mx)*CH):0;
-      const fut=w.actual===0&&i>=2,r=w.planned>0?w.actual/w.planned:null;
-      const ac=fut?'#c4d8ec':r===null?'#dde4eb':r>=0.9?this.GREEN:r>=0.75?this.BLUE:this.AMBER;
-      return[
-        React.createElement('rect',{key:`pb${i}`,x,y:CH-pH,width:BW,height:pH,fill:'#dde9f4',rx:3}),
-        aH>0&&React.createElement('rect',{key:`ab${i}`,x:x+BW+GAP,y:CH-aH,width:BW,height:aH,fill:ac,rx:3}),
-        React.createElement('text',{key:`pv${i}`,x:x+BW/2,y:CH-pH-5,textAnchor:'middle',fontSize:10,fill:this.GRAY,style:{fontFamily:'inherit',fontWeight:500}},`${Math.round(w.planned)}h`),
-        w.actual>0&&React.createElement('text',{key:`av${i}`,x:x+BW+GAP+BW/2,y:CH-aH-5,textAnchor:'middle',fontSize:10,fill:this.BLUE,style:{fontFamily:'inherit',fontWeight:600}},`${Math.round(w.actual)}h`),
-        React.createElement('text',{key:`wl${i}`,x:x+GRP/2,y:CH+16,textAnchor:'middle',fontSize:11,fill:'#6b7d94',style:{fontFamily:'inherit'}},w.label),
-        React.createElement('text',{key:`ps${i}`,x:x+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},'Plan'),
-        React.createElement('text',{key:`as${i}`,x:x+BW+GAP+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},fut?'Fcst':'Actual'),
-      ].filter(Boolean);
-    }).flat();
-    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'24px',overflowX:'auto'}},
-      React.createElement('svg',{viewBox:`0 0 ${VW} ${CH+36}`,style:{minWidth:320,width:'100%',height:'auto',display:'block'}},...bars),
-      e('div',{style:{fontSize:11,color:'#bbc4cf',marginTop:10,lineHeight:1.6}},'* Jun 15–19 partial — Saurabh hours pending · ▶ Jun 22–26 in progress')
-    );
-  }
-
-  // ── Monthly chart ──────────────────────────────────────────────
   buildMonthly(){
-    const ps=this.getProjects();
-    const owners=['Sweta','Jonny','Anil','Saurabh','Vinay'];
-    // May: actual8w[0..4] (weeks May 1 – May 29), no planned data
-    const mayAct=ps.reduce((s,p)=>s+p.actual8w.slice(0,5).reduce((a,b)=>a+b,0),0);
-    // Jun: actual8w[5..7] vs planned4w[0..3] summed via OWNER_TOTALS
-    const junAct=owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual.reduce((a,b)=>a+b,0),0);
-    const junPlan=owners.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned.reduce((a,b)=>a+b,0),0);
-    const months=[
-      {label:'May 2026',actual:mayAct,planned:null,note:'actuals only'},
-      {label:'Jun 2026',actual:junAct,planned:junPlan,note:'4 weeks'},
-    ];
-    const mx=Math.max(...months.map(m=>Math.max(m.planned||0,m.actual)));
-    const CH=140,BW=60,GAP=8,GRP=BW*2+GAP,SPC=60,VW=months.length*(GRP+SPC);
-    const bars=months.map((m,i)=>{
-      const x=i*(GRP+SPC);
-      const pH=m.planned?Math.max(4,(m.planned/mx)*CH):0;
-      const aH=m.actual>0?Math.max(4,(m.actual/mx)*CH):0;
-      const r=m.planned&&m.actual?m.actual/m.planned:null;
-      const ac=r===null?this.BLUE:r>=0.9?this.GREEN:r>=0.75?this.BLUE:this.AMBER;
-      return[
-        pH>0&&React.createElement('rect',{key:`pb${i}`,x,y:CH-pH,width:BW,height:pH,fill:'#dde9f4',rx:3}),
-        aH>0&&React.createElement('rect',{key:`ab${i}`,x:x+(m.planned?BW+GAP:BW/2),y:CH-aH,width:BW,height:aH,fill:ac,rx:3}),
-        pH>0&&React.createElement('text',{key:`pv${i}`,x:x+BW/2,y:CH-pH-5,textAnchor:'middle',fontSize:11,fill:this.GRAY,style:{fontFamily:'inherit',fontWeight:500}},`${Math.round(m.planned)}h`),
-        aH>0&&React.createElement('text',{key:`av${i}`,x:x+(m.planned?BW+GAP:BW/2)+BW/2,y:CH-aH-5,textAnchor:'middle',fontSize:11,fill:this.BLUE,style:{fontFamily:'inherit',fontWeight:600}},`${Math.round(m.actual)}h`),
-        React.createElement('text',{key:`wl${i}`,x:x+(m.planned?GRP/2:BW),y:CH+16,textAnchor:'middle',fontSize:13,fill:'#6b7d94',style:{fontFamily:'inherit',fontWeight:500}},m.label),
-        pH>0&&React.createElement('text',{key:`ps${i}`,x:x+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},'Plan'),
-        aH>0&&React.createElement('text',{key:`as${i}`,x:x+(m.planned?BW+GAP:BW/2)+BW/2,y:CH+29,textAnchor:'middle',fontSize:9,fill:'#bbc4cf',style:{fontFamily:'inherit'}},'Actual'),
-      ].filter(Boolean);
-    }).flat();
-    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'24px',overflowX:'auto'}},
-      React.createElement('svg',{viewBox:`0 0 ${VW} ${CH+36}`,style:{minWidth:240,width:'60%',height:'auto',display:'block'}},...bars),
-      e('div',{style:{fontSize:11,color:'#bbc4cf',marginTop:10,lineHeight:1.6}},'May planned hours not tracked in current data model · Jun = 4 weeks Jun 1–26')
+    const{e}=this,ps=this.filtered();
+    const rows=ps.map(p=>{
+      const mayAct=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
+      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0);
+      const junPlan=p.planned4w.reduce((s,v)=>s+v,0);
+      const pct=junPlan>0?Math.round(junAct/junPlan*100):null;
+      const tc=this.TC[p.type]||this.BLUE;
+      return e('tr',{key:p.name,style:{borderBottom:'1px solid #e4e9ef'}},
+        e('td',{style:{padding:'10px 10px'}},e('div',{style:{display:'flex',alignItems:'center',gap:7}},e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),e('span',{style:{fontSize:12,fontWeight:500,color:this.NAVY}},p.name))),
+        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},mayAct>0?mayAct+'h':'—'),
+        e('td',{style:{padding:'10px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junAct>0?junAct+'h':'—'),
+        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junPlan>0?junPlan+'h':'—'),
+        e('td',{style:{padding:'10px 10px',textAlign:'right'}},
+          pct!==null&&junPlan>0
+            ?e('div',{style:{display:'flex',alignItems:'center',gap:7,justifyContent:'flex-end'}},
+                e('div',{style:{width:48,height:5,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},e('div',{style:{height:'100%',width:Math.min(pct,100)+'%',background:pct>=80?this.GREEN:pct>=60?this.AMBER:this.RED,borderRadius:3}})),
+                e('span',{style:{fontSize:11,fontWeight:500,color:pct>=80?this.GREEN:pct>=60?this.AMBER:this.RED,minWidth:28,fontVariantNumeric:'tabular-nums'}},pct+'%')
+              )
+            :e('span',{style:{color:'#dde4eb',fontSize:11}},'—')
+        )
+      );
+    });
+    const totMay=ps.reduce((s,p)=>s+p.actual8w.slice(0,5).reduce((a,v)=>a+v,0),0);
+    const totJA=ps.reduce((s,p)=>s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
+    const totJP=ps.reduce((s,p)=>s+p.planned4w.reduce((a,v)=>a+v,0),0);
+    return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
+      e('table',{style:{width:'100%',minWidth:520,borderCollapse:'collapse'}},
+        e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+          ...['Project','Owner','May actual','Jun actual','Jun planned','Delivery'].map(h=>e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['May actual','Jun actual','Jun planned','Delivery'].includes(h)?'right':'left'}},h))
+        )),
+        e('tbody',null,...rows),
+        e('tfoot',null,e('tr',{style:{background:'#f6f8fb',borderTop:'2px solid #e4e9ef'}},
+          e('td',{style:{padding:'9px 10px',fontSize:11,fontWeight:600,color:this.NAVY}},'Total'),
+          e('td',{style:{padding:'9px 10px'}}),
+          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},totMay+'h'),
+          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},Math.round(totJA)+'h'),
+          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},Math.round(totJP)+'h'),
+          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,textAlign:'right',color:totJP>0&&totJA/totJP>=0.8?this.GREEN:this.AMBER,fontVariantNumeric:'tabular-nums'}},totJP>0?Math.round(totJA/totJP*100)+'%':'—')
+        ))
+      )
     );
   }
 
-  render(){
-    const{chartView,filterOwner}=this.state;
-    return e('div',{style:{minHeight:'100vh',fontFamily:"'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif",color:'#1b2d44',background:'#f6f8fb'}},
-
-      e('nav',{style:{background:'#1b2d44',padding:'0 clamp(20px,5vw,64px)'}},
-        e('div',{style:{maxWidth:1120,margin:'0 auto',height:52,display:'flex',alignItems:'center',justifyContent:'space-between'}},
-          e('div',{style:{display:'flex',alignItems:'center',gap:10}},
-            e('div',{style:{width:28,height:28,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
-              e('span',{style:{color:'#fff',fontWeight:700,fontSize:10,letterSpacing:'-0.3px'}},'AA')
-            ),
-            e('span',{style:{color:'rgba(255,255,255,0.85)',fontSize:13,fontWeight:500}},'BAT Projects')
+  /* ══ PROJECTS ═════════════════════════════════════ */
+  buildProjectsView(){
+    const{e}=this,{projectFilter}=this.state,all=this.getProjects();
+    const cnt={active:all.filter(p=>!['Completed','On Hold','Archived'].includes(p.status)).length,on_hold:all.filter(p=>p.status==='On Hold').length,completed:all.filter(p=>p.status==='Completed').length,archived:all.filter(p=>p.status==='Archived').length,all:all.length};
+    const display=projectFilter==='all'?all:all.filter(p=>{if(projectFilter==='active')return!['Completed','On Hold','Archived'].includes(p.status);if(projectFilter==='on_hold')return p.status==='On Hold';if(projectFilter==='completed')return p.status==='Completed';if(projectFilter==='archived')return p.status==='Archived';return true;});
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexWrap:'wrap',gap:12}},
+          e('div',null,
+            e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:8}},'Manage'),
+            e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:0,letterSpacing:'-0.02em'}},'Projects')
           ),
-          e('div',{style:{display:'flex',alignItems:'center',gap:12}},
-            e('span',{style:{color:'rgba(255,255,255,0.3)',fontSize:12,fontWeight:300}},'Jun 22, 2026'),
-            this.buildManageBtn()
+          e('button',{onClick:()=>this.setState({showProjectModal:true,editProjectId:null,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[{id:Date.now(),name:'Implementation',startMonth:5,endMonth:8,hpw:4}]}}),style:{padding:'10px 22px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ New project')
+        )
+      ),
+      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef',padding:'0 32px'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',display:'flex',gap:0}},
+          ...[['active','Active'],['on_hold','On Hold'],['completed','Completed'],['archived','Archived'],['all','All']].map(([id,lbl])=>
+            e('button',{key:id,onClick:()=>this.setState({projectFilter:id}),style:{padding:'13px 18px',border:'none',borderBottom:'2px solid '+(projectFilter===id?this.BLUE:'transparent'),background:'transparent',color:projectFilter===id?this.BLUE:'#6b7d94',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',marginBottom:-1,whiteSpace:'nowrap'}},lbl+' ('+(cnt[id]||0)+')')
           )
         )
       ),
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'24px 32px'}},
+        display.length===0
+          ?e('div',{style:{textAlign:'center',padding:'48px',color:this.GRAY,background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',fontSize:14}},'No projects in this category.')
+          :e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'auto'}},
+              e('table',{style:{width:'100%',minWidth:700,borderCollapse:'collapse'}},
+                e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+                  ...['Project','Owner','Phase','Estimated','Actual','Progress','Status',''].map(h=>e('th',{key:h,style:{padding:'10px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Estimated','Actual','Progress'].includes(h)?'right':'left'}},h))
+                )),
+                e('tbody',null,...display.map(p=>{
+                  const est=Math.round(this.estTotal(p.phases||[]));
+                  const act=Math.round(this.actTotal(p));
+                  const prog=est>0?Math.min(Math.round(act/est*100),200):null;
+                  const tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
+                  const blocker=this.getBlockers(p.name).length>0;
+                  return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
+                    e('td',{style:{padding:'13px 12px'}},
+                      e('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                        e('div',{style:{width:3,height:18,borderRadius:2,background:tc,flexShrink:0}}),
+                        e('div',null,
+                          e('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                            e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY}},p.name),
+                            blocker&&e('div',{style:{width:7,height:7,borderRadius:'50%',background:this.RED,flexShrink:0}})
+                          ),
+                          e('span',{style:{fontSize:10,fontWeight:600,color:tc,background:tc+'15',padding:'1px 6px',borderRadius:3}},p.type)
+                        )
+                      )
+                    ),
+                    e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+                    e('td',{style:{padding:'13px 12px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'3px 8px',borderRadius:4,color:phc,background:phc+'15'}},p.currentPhase)),
+                    e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},est>0?'~'+est+'h':'—'),
+                    e('td',{style:{padding:'13px 12px',fontSize:13,fontWeight:500,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},act>0?act+'h':'—'),
+                    e('td',{style:{padding:'13px 12px'}},prog!==null&&e('div',{style:{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}},e('div',{style:{width:56,height:6,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},e('div',{style:{height:'100%',width:Math.min(prog,100)+'%',background:prog>=80?this.GREEN:prog>=50?this.AMBER:this.RED,borderRadius:3}})),e('span',{style:{fontSize:11,color:this.GRAY,minWidth:32,textAlign:'right',fontVariantNumeric:'tabular-nums'}},prog+'%'))),
+                    e('td',{style:{padding:'13px 12px'}},e('select',{value:p.status,onChange:ev=>{const ps2=this.getProjects().map(x=>x.name===p.name?{...x,status:ev.target.value,currentPhase:ev.target.value}:x);this.persist({projects:ps2});},style:{padding:'5px 8px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,color:this.NAVY,fontFamily:'inherit',cursor:'pointer'}},
+                      ...['Implementation','Assessment','Testing','Go-live','Support','On Hold','Completed','Archived'].map(s=>e('option',{key:s,value:s},s))
+                    )),
+                    e('td',{style:{padding:'13px 12px'}},e('button',{onClick:()=>this.openEdit(p),style:{padding:'5px 10px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,cursor:'pointer',color:this.NAVY,fontFamily:'inherit'}},'Edit'))
+                  );
+                }))
+              )
+            )
+      )
+    );
+  }
 
-      this.buildManagePanel(),
+  openEdit(p){this.setState({showProjectModal:true,editProjectId:p.name,projectForm:{name:p.name,owner:p.owner,type:p.type,status:p.status,phases:(p.phases||[]).map(ph=>({...ph}))}});}
 
-      e('div',{style:{background:'#1b2d44',padding:'clamp(40px,6vw,80px) clamp(20px,5vw,64px) clamp(52px,8vw,100px)'}},
-        e('div',{style:{maxWidth:1120,margin:'0 auto'}},
-          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.14em',textTransform:'uppercase',fontWeight:600,marginBottom:16}},'Business Applications Team · Portfolio Review'),
-          e('h1',{style:{fontSize:'clamp(30px,5vw,58px)',fontWeight:300,color:'#fff',lineHeight:1.1,margin:'0 0 16px',letterSpacing:'-0.025em',maxWidth:600}},
-            'What the team',e('br',null),'is building.'
+  buildProjectModal(){
+    if(!this.state.showProjectModal)return null;
+    const{e}=this,{projectForm,editProjectId}=this.state,isEdit=!!editProjectId;
+    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff',width:'100%'};
+    const set=patch=>this.setState({projectForm:{...projectForm,...patch}});
+    const setPh=(id,patch)=>this.setState(s=>({projectForm:{...s.projectForm,phases:s.projectForm.phases.map(ph=>ph.id===id?{...ph,...patch}:ph)}}));
+    const est=Math.round(this.estTotal(projectForm.phases));
+    const phases=projectForm.phases.map(ph=>{
+      const phEst=Math.round(ph.hpw*(ph.endMonth-ph.startMonth+1)*4.33);
+      return e('div',{key:ph.id,style:{background:'#f6f8fb',borderRadius:8,padding:'14px',marginBottom:8}},
+        e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 80px',gap:10,marginBottom:8}},
+          e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Phase'),e('select',{value:ph.name,onChange:ev=>setPh(ph.id,{name:ev.target.value}),style:iS},...['Analysis','Implementation','Testing','Go-live','Support','Assessment','RFP'].map(n=>e('option',{key:n,value:n},n)))),
+          e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Start'),e('select',{value:ph.startMonth,onChange:ev=>setPh(ph.id,{startMonth:parseInt(ev.target.value)}),style:iS},...this.MONTH_OPTS.map(m=>e('option',{key:m.value,value:m.value},m.label)))),
+          e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'End'),e('select',{value:ph.endMonth,onChange:ev=>setPh(ph.id,{endMonth:parseInt(ev.target.value)}),style:iS},...this.MONTH_OPTS.map(m=>e('option',{key:m.value,value:m.value},m.label)))),
+          e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'h/wk'),e('input',{type:'number',value:ph.hpw,min:0,max:40,step:0.5,onChange:ev=>setPh(ph.id,{hpw:parseFloat(ev.target.value)||0}),style:iS}))
+        ),
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+          e('span',{style:{fontSize:11,color:this.GRAY}},'~'+phEst+'h total · '+ph.hpw+'h/wk'),
+          e('button',{onClick:()=>this.setState(s=>({projectForm:{...s.projectForm,phases:s.projectForm.phases.filter(x=>x.id!==ph.id)}})),style:{padding:'3px 8px',border:'1px solid #fde8ec',borderRadius:4,background:'#fde8ec',color:this.RED,fontSize:11,cursor:'pointer',fontFamily:'inherit'}},'Remove')
+        )
+      );
+    });
+    return e('div',{style:{position:'fixed',inset:0,background:'rgba(10,20,35,0.72)',zIndex:1000,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'32px 16px',overflowY:'auto',animation:'fadeIn 0.15s ease-out'}},
+      e('div',{style:{background:'#fff',borderRadius:12,width:'100%',maxWidth:640,boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 24px',borderBottom:'1px solid #e4e9ef'}},
+          e('h2',{style:{margin:0,fontSize:16,fontWeight:600,color:this.NAVY}},isEdit?'Edit project':'New project'),
+          e('button',{onClick:()=>this.setState({showProjectModal:false}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',fontFamily:'inherit'}},'×')
+        ),
+        e('div',{style:{padding:'24px',maxHeight:'68vh',overflowY:'auto'}},
+          e('div',{style:{marginBottom:24}},
+            e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:12}},'Project details'),
+            e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
+              e('div',{style:{gridColumn:'1/-1'}},e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Name'),e('input',{type:'text',placeholder:'e.g. AP Advance Matching',value:projectForm.name,onChange:ev=>set({name:ev.target.value}),style:iS,disabled:isEdit})),
+              e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Owner'),e('select',{value:projectForm.owner,onChange:ev=>set({owner:ev.target.value}),style:iS},...this.getMembers().map(m=>e('option',{key:m,value:m},m)))),
+              e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Type'),e('select',{value:projectForm.type,onChange:ev=>set({type:ev.target.value}),style:iS},...['Transform','Grow','Run','Agent'].map(t=>e('option',{key:t,value:t},t)))),
+              e('div',{style:{gridColumn:'1/-1'}},e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Status'),e('select',{value:projectForm.status,onChange:ev=>set({status:ev.target.value}),style:iS},...['Implementation','Assessment','Testing','Go-live','Support','On Hold','Completed','Archived'].map(s=>e('option',{key:s,value:s},s))))
+            )
           ),
-          e('p',{style:{fontSize:'clamp(13px,1.8vw,16px)',color:'rgba(255,255,255,0.4)',maxWidth:480,lineHeight:1.75,fontWeight:300,margin:0}},
-            'Planned hours, actual delivery, and variance across all projects. Click ',
-            e('strong',{style:{color:'rgba(255,255,255,0.6)',fontWeight:500}},'Manage'),
-            ' to log hours, add projects, or update the team.'
+          e('div',null,
+            e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+              e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Phases & estimation'),
+              e('button',{onClick:()=>this.setState(s=>({projectForm:{...s.projectForm,phases:[...s.projectForm.phases,{id:Date.now(),name:'Implementation',startMonth:5,endMonth:8,hpw:4}]}})),style:{padding:'5px 12px',border:'1.5px solid '+this.BLUE,borderRadius:7,background:'#fff',color:this.BLUE,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add phase')
+            ),
+            ...phases,
+            projectForm.phases.length===0&&e('div',{style:{textAlign:'center',padding:'16px',color:'#bbc4cf',fontSize:13,background:'#f6f8fb',borderRadius:8}},'No phases yet. Add a phase to estimate total hours.'),
+            est>0&&e('div',{style:{background:'#e8edf5',borderRadius:8,padding:'12px 14px',marginTop:10,display:'flex',justifyContent:'space-between',alignItems:'center'}},
+              e('span',{style:{fontSize:13,color:this.NAVY,fontWeight:500}},'Total estimated'),
+              e('span',{style:{fontSize:22,fontWeight:700,color:this.BLUE,fontVariantNumeric:'tabular-nums'}},'~'+est+'h')
+            )
           )
-        )
-      ),
-
-      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef'}},
-        e('div',{style:{maxWidth:1120,margin:'0 auto',padding:'0 clamp(20px,5vw,64px)'}},this.buildKPIs())
-      ),
-
-      e('div',{style:{maxWidth:1120,margin:'0 auto',padding:'clamp(48px,6vw,80px) clamp(20px,5vw,64px)'}},
-
-        /* 01 – Team allocation */
-        e('section',{style:{marginBottom:'clamp(52px,7vw,88px)'}},
-          e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,marginBottom:20,flexWrap:'wrap'}},
-            e('div',{style:{display:'flex',alignItems:'flex-start',gap:18}},
-              e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'01'),
-              e('div',null,
-                e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Team allocation'),
-                e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},'Planned vs. actual hours per person — Jun 8–12, the last complete week.')
-              )
-            ),
-            e('div',{style:{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',paddingTop:4}},
-              e('span',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Filter'),
-              this.buildOwnerPills(true)
-            )
-          ),
-          this.buildTeamBars()
         ),
-
-        e('div',{style:{height:1,background:'#e4e9ef',marginBottom:'clamp(52px,7vw,88px)'}}),
-
-        /* 02 – Active portfolio */
-        e('section',{style:{marginBottom:'clamp(52px,7vw,88px)'}},
-          e('div',{style:{display:'flex',alignItems:'flex-start',gap:18,marginBottom:28}},
-            e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'02'),
-            e('div',null,
-              e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Active portfolio'),
-              e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},'Every project in flight. Click any row to see the full 8-week trend.')
-            )
-          ),
-          this.buildFilterBar(),
-          this.buildTable()
-        ),
-
-        e('div',{style:{height:1,background:'#e4e9ef',marginBottom:'clamp(52px,7vw,88px)'}}),
-
-        /* 03 – Planned vs. actual */
-        e('section',null,
-          e('div',{style:{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:18,marginBottom:28,flexWrap:'wrap'}},
-            e('div',{style:{display:'flex',alignItems:'flex-start',gap:18}},
-              e('div',{style:{fontSize:11,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:4,minWidth:24}},'03'),
-              e('div',null,
-                e('h2',{style:{fontSize:'clamp(18px,2.8vw,28px)',fontWeight:400,color:'#1b2d44',letterSpacing:'-0.015em',margin:'0 0 6px'}},'Planned vs. actual'),
-                e('p',{style:{fontSize:14,color:'#6b7d94',lineHeight:1.6,margin:0,maxWidth:440}},chartView==='weekly'?'Team-wide delivery by week. Light = planned, filled = delivered.':'Monthly rollup — May actuals and Jun plan vs. actual.')
-              )
-            ),
-            e('div',{style:{display:'flex',borderRadius:8,border:'1px solid #dde4eb',overflow:'hidden',flexShrink:0}},
-              ...['weekly','monthly'].map(v=>e('button',{key:v,onClick:()=>this.setState({chartView:v}),style:{
-                padding:'6px 16px',border:'none',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',
-                background:chartView===v?this.NAVY:'#fff',
-                color:chartView===v?'#fff':'#6b7d94',
-              }},v==='weekly'?'Weekly':'Monthly'))
-            )
-          ),
-          chartView==='weekly'?this.buildWeekly():this.buildMonthly()
-        )
-      ),
-
-      e('footer',{style:{background:'#1b2d44',marginTop:'clamp(52px,7vw,88px)',padding:'clamp(18px,3vw,32px) clamp(20px,5vw,64px)'}},
-        e('div',{style:{maxWidth:1120,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:10}},
-          e('span',{style:{color:'rgba(255,255,255,0.25)',fontSize:12,fontWeight:300}},'Business Applications Team · Automation Anywhere'),
-          e('span',{style:{color:'rgba(255,255,255,0.18)',fontSize:12,fontWeight:300}},'Generated Jun 22, 2026')
+        e('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,padding:'18px 24px',borderTop:'1px solid #e4e9ef'}},
+          e('button',{onClick:()=>this.setState({showProjectModal:false}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
+          e('button',{onClick:()=>{
+            if(!projectForm.name.trim())return;
+            if(isEdit){this.persist({projects:this.getProjects().map(p=>p.name===editProjectId?{...p,owner:projectForm.owner,type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases}:p),showProjectModal:false});}
+            else{this.persist({projects:[...this.getProjects(),{name:projectForm.name.trim(),owner:projectForm.owner,type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases,actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]}],showProjectModal:false});}
+          },style:{padding:'8px 22px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},isEdit?'Save changes':'Add project')
         )
       )
     );
+  }
+
+  /* ══ LOG HOURS ════════════════════════════════════ */
+  buildLogView(){
+    const{e}=this,{logMember,logWeek,logEntries,logSaved}=this.state;
+    const iS={width:80,padding:'7px 10px',border:'1px solid #dde4eb',borderRadius:7,fontSize:13,textAlign:'right',fontFamily:'inherit',background:'#fff',color:this.NAVY};
+    const ps=this.getProjects().filter(p=>p.owner===logMember&&!['Completed','Archived'].includes(p.status));
+    const selWk=this.WEEKS.find(w=>w.id===logWeek);
+    const ptoVal=this.state.ptoLog[logMember]?.[logWeek]||'';
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px 32px'}},
+        e('div',{style:{maxWidth:900,margin:'0 auto'}},
+          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'Weekly timesheet'),
+          e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:'0 0 8px',letterSpacing:'-0.02em'}},'Log Hours'),
+          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6,fontWeight:300}},'Select your week and name. Log planned and actual hours per project. Include PTO so the team sees your true available capacity.')
+        )
+      ),
+      e('div',{style:{maxWidth:900,margin:'0 auto',padding:'28px 32px',display:'flex',flexDirection:'column',gap:16}},
+        // Week picker
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'20px'}},
+          e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:12}},'Select week'),
+          e('div',{style:{display:'flex',gap:20,flexWrap:'wrap'}},
+            ...['May','Jun'].map(mo=>e('div',{key:mo},
+              e('div',{style:{fontSize:11,color:'#bbc4cf',fontWeight:600,marginBottom:6}},mo+' 2026'),
+              e('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
+                ...this.WEEKS.filter(w=>w.month===(mo==='May'?4:5)).map(w=>{
+                  const sel=w.id===logWeek;
+                  const hasData=Object.keys(this.state.weeklyLog).some(n=>this.state.weeklyLog[n]?.[w.id]);
+                  return e('button',{key:w.id,onClick:()=>{const ent=this.loadWeekEntries(w.id,logMember);this.setState({logWeek:w.id,logEntries:ent});},style:{padding:'6px 12px',borderRadius:7,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',position:'relative',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#f0f4ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},
+                    w.short,
+                    hasData&&!sel&&e('span',{style:{position:'absolute',top:2,right:2,width:5,height:5,borderRadius:'50%',background:this.GREEN,display:'block'}})
+                  );
+                })
+              )
+            ))
+          )
+        ),
+        // Member picker
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'20px'}},
+          e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:12}},'Team member'),
+          e('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
+            ...this.getMembers().map(m=>e('button',{key:m,onClick:()=>{const ent=this.loadWeekEntries(logWeek,m);this.setState({logMember:m,logEntries:ent});},style:{padding:'8px 18px',borderRadius:9999,fontSize:14,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'2px solid '+(logMember===m?this.BLUE:'#dde4eb'),background:logMember===m?this.BLUE:'#fff',color:logMember===m?'#fff':'#6b7d94'}},m))
+          )
+        ),
+        // PTO card
+        e('div',{style:{background:'#fff8ec',borderRadius:12,border:'1px solid #f5d8a0',padding:'16px 20px',display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}},
+          e('div',{style:{flex:'1 1 200px'}},
+            e('div',{style:{fontSize:13,fontWeight:500,color:this.NAVY,marginBottom:3}},'PTO / time off this week'),
+            e('div',{style:{fontSize:12,color:'#9b7a3a',lineHeight:1.5}},'Log hours off so the team can see your adjusted capacity. Won\'t count as missed hours.')
+          ),
+          e('div',{style:{display:'flex',alignItems:'center',gap:10}},
+            e('input',{type:'number',value:ptoVal,min:0,max:40,step:0.5,placeholder:'0',onChange:ev=>{
+              const val=ev.target.value===''?null:parseFloat(ev.target.value)||0;
+              const newPto={...this.state.ptoLog};
+              if(!newPto[logMember])newPto[logMember]={};
+              if(val===null)delete newPto[logMember][logWeek];
+              else newPto[logMember][logWeek]=val;
+              this.setState({ptoLog:newPto});
+            },style:{width:80,...iS,border:'1px solid #f5d8a0',background:'#fff'}}),
+            e('span',{style:{fontSize:13,color:'#9b7a3a'}},ptoVal>0?'h PTO · '+(40-ptoVal)+'h available this week':'hours off')
+          )
+        ),
+        // Hours table
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'hidden'}},
+          e('div',{style:{padding:'16px 20px',borderBottom:'1px solid #f0f4f8',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:8}},
+            e('div',null,
+              e('div',{style:{fontSize:14,fontWeight:500,color:this.NAVY}},logMember+'\'s projects'),
+              e('div',{style:{fontSize:12,color:this.GRAY,marginTop:2}},'Week ending '+(selWk?.short||logWeek)+(selWk?.current?' (current week)':''))
+            ),
+            logSaved&&e('div',{style:{fontSize:13,fontWeight:500,color:this.GREEN,padding:'6px 12px',background:'#e8f5ef',borderRadius:6}},'Saved!')
+          ),
+          e('table',{style:{width:'100%',borderCollapse:'collapse'}},
+            e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+              ...['Project','Phase','Planned (h)','Actual (h)'].map(h=>e('th',{key:h,style:{padding:'11px 16px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',textAlign:['Planned (h)','Actual (h)'].includes(h)?'right':'left'}},h))
+            )),
+            e('tbody',null,
+              ps.length===0
+                ?e('tr',{key:'empty'},e('td',{colSpan:4,style:{padding:'32px',textAlign:'center',color:this.GRAY,fontSize:14}},'No active projects for this member.'))
+                :ps.map(p=>{
+                    const ent=logEntries[p.name]||{planned:'',actual:''};
+                    const phc=this.PC[p.currentPhase]||this.GRAY;
+                    const upd=(f,v)=>this.setState(s=>({logEntries:{...s.logEntries,[p.name]:{...s.logEntries[p.name]||{},[f]:v}}}));
+                    return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
+                      e('td',{style:{padding:'14px 16px'}},
+                        e('div',{style:{display:'flex',alignItems:'center',gap:8}},
+                          e('div',{style:{width:3,height:18,borderRadius:2,background:this.TC[p.type]||this.BLUE,flexShrink:0}}),
+                          e('div',null,
+                            e('div',{style:{fontSize:14,fontWeight:500,color:this.NAVY}},p.name),
+                            e('span',{style:{fontSize:10,fontWeight:600,color:this.TC[p.type]||this.BLUE,background:(this.TC[p.type]||this.BLUE)+'15',padding:'1px 6px',borderRadius:3}},p.type)
+                          )
+                        )
+                      ),
+                      e('td',{style:{padding:'14px 16px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'3px 8px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
+                      e('td',{style:{padding:'14px 16px',textAlign:'right'}},e('input',{type:'number',value:ent.planned??'',min:0,step:0.5,onChange:ev=>upd('planned',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:iS})),
+                      e('td',{style:{padding:'14px 16px',textAlign:'right'}},e('input',{type:'number',value:ent.actual??'',min:0,step:0.5,placeholder:'—',onChange:ev=>upd('actual',ev.target.value===''?'':parseFloat(ev.target.value)||0),style:{...iS,borderColor:this.BLUE,background:'#f4f8ff'}}))
+                    );
+                  })
+            )
+          ),
+          ps.length>0&&e('div',{style:{padding:'14px 16px',borderTop:'1px solid #f0f4f8',display:'flex',justifyContent:'flex-end',gap:10}},
+            e('button',{onClick:()=>this.setState({logEntries:{}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Clear'),
+            e('button',{onClick:()=>{
+              const nl={...this.state.weeklyLog};
+              Object.entries(logEntries).forEach(([n,v])=>{if(v.planned!==''||v.actual!==''){if(!nl[n])nl[n]={};nl[n][logWeek]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};}});
+              // Save PTO to persistent store too
+              this.persist({weeklyLog:nl,ptoLog:this.state.ptoLog});
+              this.setState({logSaved:true});
+              setTimeout(()=>this.setState({logSaved:false}),2500);
+            },style:{padding:'8px 24px',border:'none',borderRadius:8,background:this.GREEN,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},logSaved?'Saved!':'Save hours')
+          )
+        )
+      )
+    );
+  }
+
+  /* ══ TEAM ═════════════════════════════════════════ */
+  buildTeamView(){
+    const{e}=this,{newMember}=this.state,members=this.getMembers();
+    const iS={padding:'8px 12px',border:'1px solid #dde4eb',borderRadius:8,fontSize:13,fontFamily:'inherit',color:this.NAVY,background:'#fff'};
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px'}},
+        e('div',{style:{maxWidth:900,margin:'0 auto'}},
+          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'People'),
+          e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:'0 0 8px',letterSpacing:'-0.02em'}},'Team'),
+          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6,fontWeight:300}},'Add and manage team members. Data currently saved in browser — connect a database for org-wide sync.')
+        )
+      ),
+      e('div',{style:{maxWidth:900,margin:'0 auto',padding:'28px 32px',display:'flex',flexDirection:'column',gap:16}},
+        // Add member
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'20px'}},
+          e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:12}},'Add new team member'),
+          e('div',{style:{display:'flex',gap:10,flexWrap:'wrap',alignItems:'flex-end'}},
+            e('div',null,
+              e('div',{style:{fontSize:11,color:this.GRAY,marginBottom:4}},'Full name'),
+              e('input',{type:'text',placeholder:'e.g. Priya Sharma',value:newMember.name,onChange:ev=>this.setState({newMember:{...newMember,name:ev.target.value}}),style:{...iS,width:200}})
+            ),
+            e('div',null,
+              e('div',{style:{fontSize:11,color:this.GRAY,marginBottom:4}},'Capacity (h/wk)'),
+              e('input',{type:'number',value:newMember.capacity,min:1,max:80,onChange:ev=>this.setState({newMember:{...newMember,capacity:parseInt(ev.target.value)||40}}),style:{...iS,width:120}})
+            ),
+            e('button',{onClick:()=>{if(!newMember.name.trim())return;this.persist({members:[...members,newMember.name.trim()],newMember:{name:'',capacity:40}});},style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add member')
+          )
+        ),
+        // Future DB callout
+        e('div',{style:{background:'#f0f5ff',borderRadius:10,padding:'14px 18px',border:'1px solid #d0dff5'}},
+          e('div',{style:{fontSize:13,fontWeight:600,color:this.NAVY,marginBottom:4}},'Future enhancement: Shared database'),
+          e('div',{style:{fontSize:12,color:'#4778a8',lineHeight:1.6}},'Connect to Supabase, SharePoint Lists, or Airtable so every team member syncs in real time from any device. New members added here will instantly appear for the whole team. Estimated effort: 1 day with IT support.')
+        ),
+        // Member list
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'auto'}},
+          e('table',{style:{width:'100%',borderCollapse:'collapse'}},
+            e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+              ...['Member','Active projects','Capacity','PTO this week',''].map(h=>e('th',{key:h,style:{padding:'10px 16px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
+            )),
+            e('tbody',null,...members.map(m=>{
+              const active=this.getProjects().filter(p=>p.owner===m&&!['Completed','Archived'].includes(p.status)).length;
+              const cap=(this.OWNER_TOTALS[m]?.planned||[40])[0];
+              const pto=this.getMemberPTO(m,'w_jun26');
+              return e('tr',{key:m,style:{borderBottom:'1px solid #f0f4f8'}},
+                e('td',{style:{padding:'14px 16px'}},
+                  e('div',{style:{display:'flex',alignItems:'center',gap:10}},
+                    e('div',{style:{width:32,height:32,borderRadius:'50%',background:this.BLUE,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                      e('span',{style:{fontSize:12,color:'#fff',fontWeight:700}},m.substring(0,1))
+                    ),
+                    e('div',null,
+                      e('div',{style:{fontSize:14,fontWeight:500,color:this.NAVY}},m),
+                      e('div',{style:{fontSize:11,color:this.GRAY}},active+' active project'+(active!==1?'s':''))
+                    )
+                  )
+                ),
+                e('td',{style:{padding:'14px 16px',fontSize:13,color:this.NAVY,fontVariantNumeric:'tabular-nums'}},active),
+                e('td',{style:{padding:'14px 16px',fontSize:13,color:this.GRAY}},cap+'h / wk'),
+                e('td',{style:{padding:'14px 16px',fontSize:13,color:pto>0?this.AMBER:this.GRAY}},pto>0?pto+'h PTO':'—'),
+                e('td',{style:{padding:'14px 16px',textAlign:'right'}},
+                  !this.DEFAULT_MEMBERS.includes(m)&&e('button',{onClick:()=>this.persist({members:members.filter(x=>x!==m)}),style:{padding:'4px 10px',border:'1px solid #e4e9ef',borderRadius:6,background:'#fff',color:this.GRAY,fontSize:12,cursor:'pointer',fontFamily:'inherit'}},'Remove')
+                )
+              );
+            }))
+          )
+        )
+      )
+    );
+  }
+
+  renderVals(){
+    const{view}=this.state;
+    return{
+      nav:this.buildNav(),
+      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():this.buildTeamView(),
+      projectModal:this.buildProjectModal(),
+    };
   }
 }
-
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(BATDashboard));
 </script>
 </body>
 </html>

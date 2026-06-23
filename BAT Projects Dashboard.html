@@ -189,11 +189,12 @@ class Component extends DCLogic {
   iconFolder(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('path',{d:'M1 5a1 1 0 011-1h4l1.5 2H14a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5z'}));}
   iconClock(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:8,cy:8,r:6.5}),React.createElement('path',{d:'M8 4.5V8l2.5 1.5'}));}
   iconTeam(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:6,cy:5,r:2.5}),React.createElement('path',{d:'M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5'}),React.createElement('circle',{cx:12.5,cy:5.5,r:2}),React.createElement('path',{d:'M15 14c0-2.21-1.79-4-4-4'}));}
+  iconTimeline(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('rect',{x:1,y:3,width:14,height:10,rx:1}),React.createElement('path',{d:'M1 6h14'}),React.createElement('path',{d:'M5 6v7'}),React.createElement('path',{d:'M10 6v7'}));}
 
   /* ── Nav ───────────────────────────────────────── */
   buildNav(){
     const{e}=this,{view}=this.state;
-    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['team','Team',this.iconTeam()]];
+    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['timeline','Timeline',this.iconTimeline()],['team','Team',this.iconTeam()]];
     return e('nav',{style:{width:220,flexShrink:0,background:this.NAVY,display:'flex',flexDirection:'column',height:'100vh'}},
       e('div',{style:{padding:'18px 16px 14px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(255,255,255,0.08)'}},
         e('div',{style:{width:32,height:32,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
@@ -979,11 +980,131 @@ class Component extends DCLogic {
     );
   }
 
+  buildTimelineView(){
+    const{e}=this,{filterOwner,filterType}=this.state;
+    const WEEKS_FULL=this.ALL_WEEKS;
+    let ps=this.getProjects().filter(p=>p.status!=='Archived');
+    if(filterOwner!=='All')ps=ps.filter(p=>p.owner===filterOwner);
+    if(filterType!=='All')ps=ps.filter(p=>p.type===filterType);
+    const COL=84,LABEL=190;
+
+    const getVal=(p,w)=>{
+      let actual=null,planned=null;
+      if(w.actualIdx!==null&&w.actualIdx!==undefined){const v=p.actual8w[w.actualIdx];actual=v>0?v:null;}
+      if(w.current){const log=this.state.weeklyLog[p.name]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
+      else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
+      else if(w.isFuture&&w.forecastIdx!==null&&w.forecastIdx!==undefined)planned=p.forecast[w.forecastIdx]||0;
+      return{actual,planned};
+    };
+
+    const hdrCells=WEEKS_FULL.map(w=>e('th',{key:w.id,style:{width:COL,minWidth:COL,padding:'8px 4px',fontSize:10,fontWeight:600,textAlign:'center',whiteSpace:'nowrap',color:w.current?this.BLUE:w.isFuture?'#bbc4cf':'#6b7d94',background:w.current?'#f0f5ff':w.isFuture?'#fafbfc':'#f6f8fb',borderBottom:'2px solid '+(w.current?this.BLUE:'#e4e9ef'),position:'sticky',top:0,zIndex:1}},
+      e('div',null,w.short),
+      e('div',{style:{fontSize:8,color:w.current?this.BLUE:w.isFuture?'#c4cdd6':'#bbc4cf',marginTop:1,fontWeight:400}},w.isFuture?'forecast':w.current?'now':'actual')
+    ));
+
+    const weekTotals=WEEKS_FULL.map(w=>{
+      let totAct=0,totPlan=0;
+      ps.forEach(p=>{const d=getVal(p,w);totAct+=d.actual||0;totPlan+=d.planned||0;});
+      return{totAct,totPlan};
+    });
+
+    const projectRows=ps.map(p=>{
+      const tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
+      const cells=WEEKS_FULL.map(w=>{
+        const{actual,planned}=getVal(p,w);
+        const hasAct=actual!=null&&actual>0,hasPlan=planned!=null&&planned>0;
+        const ratio=hasPlan&&hasAct?actual/planned:null;
+        const actColor=ratio===null?(hasAct?this.BLUE:'transparent'):ratio>=0.9?this.GREEN:ratio>=0.65?this.AMBER:this.RED;
+        const vari=hasPlan&&hasAct?Math.round((actual-planned)*10)/10:null;
+        return e('td',{key:w.id,style:{padding:'6px 4px',textAlign:'center',background:w.current?'#f4f8ff':w.isFuture?'#fafbfc':'transparent',borderLeft:'1px solid #f0f4f8',verticalAlign:'middle'}},
+          e('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
+            hasPlan&&e('div',{style:{fontSize:10,color:w.isFuture?'#9aaabb':'#bbc4cf',fontVariantNumeric:'tabular-nums',lineHeight:1}},(w.isFuture?'~':'')+planned+'h'),
+            hasAct&&e('div',{style:{fontSize:12,fontWeight:600,color:actColor,fontVariantNumeric:'tabular-nums',lineHeight:1}},actual+'h'),
+            !hasAct&&!hasPlan&&e('div',{style:{fontSize:10,color:'#dde4eb'}},'—'),
+            vari!==null&&Math.abs(vari)>=0.5&&e('div',{style:{fontSize:9,fontWeight:500,color:vari>=0?this.GREEN:this.RED,background:vari>=0?'#e8f5ef':'#fde8ec',borderRadius:3,padding:'0 3px',lineHeight:1.4,fontVariantNumeric:'tabular-nums'}},(vari>0?'+':'')+vari)
+          )
+        );
+      });
+      return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'},onMouseEnter:ev=>{ev.currentTarget.style.background='#f6f8fb';},onMouseLeave:ev=>{ev.currentTarget.style.background='';}},
+        e('td',{style:{padding:'10px 12px',position:'sticky',left:0,background:'#fff',zIndex:1,borderRight:'2px solid #e4e9ef',minWidth:LABEL,maxWidth:LABEL}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:7}},
+            e('div',{style:{width:3,height:16,borderRadius:2,background:tc,flexShrink:0}}),
+            e('div',null,
+              e('div',{style:{fontSize:12,fontWeight:500,color:this.NAVY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:160}},p.name),
+              e('div',{style:{display:'flex',alignItems:'center',gap:4,marginTop:2}},
+                e('span',{style:{fontSize:9,color:this.GRAY}},p.owner),
+                p.currentPhase&&e('span',{style:{fontSize:9,color:phc,background:phc+'18',padding:'0 4px',borderRadius:2}},p.currentPhase)
+              )
+            )
+          )
+        ),
+        ...cells
+      );
+    });
+
+    const totalsRow=e('tr',{key:'totals',style:{background:'#f6f8fb',borderTop:'2px solid #e4e9ef'}},
+      e('td',{style:{padding:'10px 12px',position:'sticky',left:0,background:'#f6f8fb',zIndex:1,borderRight:'2px solid #e4e9ef',fontWeight:600,fontSize:12,color:this.NAVY}},'Team total'),
+      ...WEEKS_FULL.map((w,wi)=>{
+        const{totAct,totPlan}=weekTotals[wi];
+        const ratio=totPlan>0&&totAct>0?totAct/totPlan:null;
+        const actColor=ratio===null?(totAct>0?this.BLUE:this.GRAY):ratio>=0.9?this.GREEN:ratio>=0.65?this.AMBER:this.RED;
+        return e('td',{key:w.id,style:{padding:'8px 4px',textAlign:'center',background:w.current?'#eaf1ff':w.isFuture?'#f4f5f6':'transparent',borderLeft:'1px solid #e4e9ef'}},
+          e('div',{style:{display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
+            totPlan>0&&e('div',{style:{fontSize:10,color:'#bbc4cf',fontVariantNumeric:'tabular-nums'}},(w.isFuture?'~':'')+Math.round(totPlan)+'h'),
+            totAct>0&&e('div',{style:{fontSize:12,fontWeight:700,color:actColor,fontVariantNumeric:'tabular-nums'}},Math.round(totAct)+'h'),
+            !totAct&&!totPlan&&e('div',{style:{fontSize:10,color:'#dde4eb'}},'—')
+          )
+        );
+      })
+    );
+
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px'}},
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexWrap:'wrap',gap:12}},
+          e('div',null,
+            e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:8}},'Week-by-week'),
+            e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:'0 0 6px',letterSpacing:'-0.02em'}},'Actual vs. Forecast'),
+            e('p',{style:{fontSize:13,color:'rgba(255,255,255,0.4)',margin:0,fontWeight:300,lineHeight:1.6}},'Every project, every week — past actuals and forward forecast.')
+          ),
+          e('div',{style:{display:'flex',gap:14,flexWrap:'wrap',alignItems:'center'}},
+            ...[[this.GREEN,'≥90%'],[this.AMBER,'65–89%'],[this.RED,'<65%'],['#bbc4cf','Plan/Forecast']].map(([c,l])=>
+              e('div',{key:l,style:{display:'flex',alignItems:'center',gap:5}},
+                e('div',{style:{width:10,height:10,borderRadius:2,background:c}}),
+                e('span',{style:{fontSize:11,color:'rgba(255,255,255,0.45)'}},l)
+              )
+            )
+          )
+        )
+      ),
+      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef',padding:'10px 32px',display:'flex',gap:10,flexWrap:'wrap',alignItems:'center'}},
+        e('span',{style:{fontSize:11,color:'#bbc4cf',fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Filter'),
+        e('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
+          ...['All','Transform','Grow','Run','Agent'].map(t=>{const a=filterType===t,c=this.TC[t]||this.NAVY;return e('button',{key:t,onClick:()=>this.setState({filterType:t}),style:{padding:'4px 10px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(a?c:'#dde4eb'),background:a?c:'#fff',color:a?'#fff':'#6b7d94'}},t);})
+        ),
+        e('div',{style:{width:1,height:20,background:'#e4e9ef',flexShrink:0}}),
+        e('div',{style:{display:'flex',gap:4,flexWrap:'wrap'}},
+          ...['All',...this.getMembers()].map(o=>{const a=filterOwner===o;return e('button',{key:o,onClick:()=>this.setState({filterOwner:o}),style:{padding:'4px 10px',borderRadius:9999,fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(a?this.BLUE:'#dde4eb'),background:a?this.BLUE:'#fff',color:a?'#fff':'#6b7d94'}},o);})
+        ),
+        e('span',{style:{marginLeft:'auto',fontSize:11,color:'#bbc4cf'}},'Scroll right for Jul–Aug forecast →')
+      ),
+      e('div',{style:{overflowX:'auto',overflowY:'auto',maxHeight:'calc(100vh - 200px)'}},
+        e('table',{style:{borderCollapse:'collapse',minWidth:(LABEL+WEEKS_FULL.length*COL)+'px',width:'100%'}},
+          e('thead',null,e('tr',null,
+            e('th',{style:{position:'sticky',left:0,top:0,zIndex:2,background:'#f6f8fb',padding:'10px 12px',width:LABEL,minWidth:LABEL,textAlign:'left',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',borderBottom:'2px solid #e4e9ef',borderRight:'2px solid #e4e9ef'}},'Project'),
+            ...hdrCells
+          )),
+          e('tbody',null,...projectRows,totalsRow)
+        )
+      ),
+      e('div',{style:{padding:'8px 32px',background:'#f6f8fb',borderTop:'1px solid #e4e9ef',fontSize:11,color:'#bbc4cf'}},'Small = planned/forecast · Bold = actual · +/- = variance · Update Jun 26 in Log Hours')
+    );
+  }
+
   renderVals(){
     const{view}=this.state;
     return{
       nav:this.buildNav(),
-      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():this.buildTeamView(),
+      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():view==='timeline'?this.buildTimelineView():this.buildTeamView(),
       projectModal:this.buildProjectModal(),
     };
   }

@@ -177,7 +177,21 @@ class Component extends DCLogic {
       p.weeklyLog=mig;
     }
     if(d.members)p.members=d.members;
-    if(d.projects){p.projects=d.projects.map(pr=>{if(!pr.statusLog)pr.statusLog=[];return pr;});}
+    if(d.projects){
+      // Deduplicate: merge same-named entries (from old per-owner structure) into one with combined owners
+      const seen={},merged=[];
+      d.projects.forEach(pr=>{
+        const owners=pr.owners||[pr.owner].filter(Boolean);
+        if(seen[pr.name]!==undefined){
+          const ex=merged[seen[pr.name]];
+          merged[seen[pr.name]]={...ex,owners:[...new Set([...(ex.owners||[]),...owners])]};
+        } else {
+          seen[pr.name]=merged.length;
+          merged.push({...pr,owners,statusLog:pr.statusLog||[]});
+        }
+      });
+      p.projects=merged;
+    }
     if(d.ptoLog)p.ptoLog=d.ptoLog;
     if(d.projectComments)p.projectComments=d.projectComments;
     if(Object.keys(p).length)this.setState(p);
@@ -438,14 +452,28 @@ class Component extends DCLogic {
   }
 
   buildTable(){
-    const{e}=this,{expandedProject}=this.state,ps=this.filtered();
+    const{e}=this,{expandedProject,dashWeek}=this.state,ps=this.filtered();
+    const selW=this.WEEKS.find(w=>w.id===dashWeek)||this.WEEKS[this.WEEKS.length-1];
     const thead=e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
-      ...['Project','Owner','Phase','Plan','Actual','Var','Trend'].map(h=>e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Plan','Actual','Var'].includes(h)?'right':'left'}},h))
+      ...['Project','Team','Phase','Plan','Actual','Var','Trend'].map(h=>e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Plan','Actual','Var'].includes(h)?'right':'left'}},h))
     ));
     const rows=ps.flatMap(p=>{
-      const isExp=expandedProject===p.name,pl=p.planned4w[1],ac=p.actual8w[6];
-      const vari=pl>0?ac-pl:null,tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
+      const isExp=expandedProject===p.name;
+      const wd=this.getProjectWeekData(p,selW);
+      const pl=Math.round((wd.planned||0)*10)/10,ac=Math.round((wd.actual||0)*10)/10;
+      const vari=pl>0&&ac!=null?Math.round((ac-pl)*10)/10:null;
+      const tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
       const blockers=this.getBlockers(p.name);
+      const owners=this.getOwners(p);
+      // Avatar chips for team column
+      const avatarColors=[this.BLUE,'#7055c0',this.GREEN,this.AMBER,'#c73a3a'];
+      const chips=owners.slice(0,5).map((m,i)=>e('div',{key:m,title:m,style:{width:22,height:22,borderRadius:'50%',background:avatarColors[i%avatarColors.length]+'22',border:'1.5px solid '+avatarColors[i%avatarColors.length]+'44',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,marginLeft:i>0?-6:0}},
+        e('span',{style:{fontSize:8,fontWeight:700,color:avatarColors[i%avatarColors.length]}},m[0])
+      ));
+      const teamCell=e('div',{style:{display:'flex',alignItems:'center',gap:0}},
+        ...chips,
+        owners.length>5&&e('span',{style:{fontSize:10,color:this.GRAY,marginLeft:8}},'+' +(owners.length-5))
+      );
       const row=e('tr',{key:p.name,onClick:()=>this.setState({expandedProject:isExp?null:p.name}),onMouseEnter:ev=>{ev.currentTarget.style.background='#f0f4fa';},onMouseLeave:ev=>{ev.currentTarget.style.background=isExp?'#f4f7fb':'';},style:{cursor:'pointer',background:isExp?'#f4f7fb':'',borderBottom:'1px solid #e4e9ef'}},
         e('td',{style:{padding:'11px 10px'}},
           e('div',{style:{display:'flex',alignItems:'center',gap:7}},
@@ -454,7 +482,7 @@ class Component extends DCLogic {
             blockers.length>0&&e('div',{style:{width:7,height:7,borderRadius:'50%',background:this.RED,flexShrink:0,marginLeft:2}})
           )
         ),
-        e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
+        e('td',{style:{padding:'11px 10px'}},teamCell),
         e('td',{style:{padding:'11px 10px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
         e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},pl>0?pl+'h':'—'),
         e('td',{style:{padding:'11px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},ac>0?ac+'h':'—'),
@@ -471,6 +499,46 @@ class Component extends DCLogic {
 
   buildDetail(p){
     const{e}=this;
+    const owners=this.getOwners(p);
+    const selW=this.WEEKS.find(w=>w.id===(this.state.dashWeek||'w_jun26'))||this.WEEKS[this.WEEKS.length-1];
+
+    // Per-member contribution panel (only for multi-owner projects)
+    let teamPanel=null;
+    if(owners.length>1){
+      const avatarColors=[this.BLUE,'#7055c0',this.GREEN,this.AMBER,'#c73a3a'];
+      const contribs=owners.map((m,i)=>{
+        const log=this.state.weeklyLog[p.name+'|'+m];
+        let actual=0,planned=0;
+        if(selW.current){
+          actual=log?.['w_jun26']?.actual??p.actual8w[0]??0;
+          planned=log?.['w_jun26']?.planned??p.planned4w[3]??0;
+        } else {
+          actual=selW.actualIdx!==null?(log?.[selW.id]?.actual??p.actual8w[selW.actualIdx]??0):0;
+          planned=selW.plannedIdx!==null?(log?.[selW.id]?.planned??p.planned4w[selW.plannedIdx]??0):0;
+        }
+        const pct=planned>0?Math.round(actual/planned*100):null;
+        const bc=pct===null?this.GRAY:pct>=90?this.GREEN:pct>=70?this.BLUE:pct>=50?this.AMBER:this.RED;
+        const color=avatarColors[i%avatarColors.length];
+        return e('div',{key:m,style:{display:'flex',alignItems:'center',gap:10,padding:'8px 12px',background:'#fff',borderRadius:8,border:'1px solid #e4e9ef',flex:'1 1 130px',minWidth:120}},
+          e('div',{style:{width:28,height:28,borderRadius:'50%',background:color+'15',border:'1.5px solid '+color+'44',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+            e('span',{style:{fontSize:11,fontWeight:700,color:color}},m[0])
+          ),
+          e('div',{style:{minWidth:0}},
+            e('div',{style:{fontSize:12,fontWeight:600,color:this.NAVY,lineHeight:1}},m),
+            e('div',{style:{display:'flex',alignItems:'baseline',gap:4,marginTop:3}},
+              e('span',{style:{fontSize:14,fontWeight:700,color:bc,fontVariantNumeric:'tabular-nums'}},actual+'h'),
+              planned>0&&e('span',{style:{fontSize:10,color:this.GRAY}},'/'+planned+'h'),
+              pct!==null&&e('span',{style:{fontSize:10,fontWeight:500,color:bc,background:bc+'12',padding:'0 4px',borderRadius:3}},pct+'%')
+            )
+          )
+        );
+      });
+      teamPanel=e('div',{style:{padding:'14px 20px 10px',borderBottom:'1px solid #f0f4f8'}},
+        e('div',{style:{fontSize:9,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:8}},'Team contributions · '+selW.short),
+        e('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},...contribs)
+      );
+    }
+
     const WL=['May 1','May 8','May 15','May 22','May 29','Jun 5','Jun 12','Jun 19'];
     const pts=[...p.actual8w.map((a,i)=>({label:WL[i],actual:a,planned:i>=5?p.planned4w[i-5]:null,fc:false})),
       {label:'Jun 22',planned:p.planned4w[3],actual:null,fc:true},
@@ -526,6 +594,7 @@ class Component extends DCLogic {
     );
 
     return e('div',{style:{animation:'slideDown 0.15s ease-out'}},
+      teamPanel,
       e('div',{style:{padding:'16px 20px 12px',display:'flex',gap:24,flexWrap:'wrap'}},
         e('div',{style:{flex:'1 1 280px',minWidth:0}},
           phGantt,

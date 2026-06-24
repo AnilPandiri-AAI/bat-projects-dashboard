@@ -65,7 +65,7 @@ class Component extends DCLogic {
     logMember:'Sweta',logWeek:'w_jun26',logEntries:{},logSaved:false,
     ptoLog:{},projectComments:{},commentForm:{author:'Sweta',text:'',isBlocker:false},
     newMember:{name:'',capacity:40},
-    weeklyLog:{},members:null,projects:null,
+    weeklyLog:{},members:null,projects:null,weeklyViewWeek:'w_jun26',
   };
 
   NAVY='#1b2d44';BLUE='#4778a8';GREEN='#2ea86a';AMBER='#d98f28';RED='#c73a3a';GRAY='#9aaabb';
@@ -247,7 +247,7 @@ class Component extends DCLogic {
   /* ── Nav ───────────────────────────────────────── */
   buildNav(){
     const{e}=this,{view}=this.state;
-    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['timeline','Timeline',this.iconTimeline()],['team','Team',this.iconTeam()]];
+    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['timeline','Timeline',this.iconTimeline()],['weekly','Weekly',this.iconCalendar()],['team','Team',this.iconTeam()]];
     return e('nav',{style:{width:220,flexShrink:0,background:this.NAVY,display:'flex',flexDirection:'column',height:'100vh'}},
       e('div',{style:{padding:'18px 16px 14px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(255,255,255,0.08)'}},
         e('div',{style:{width:32,height:32,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
@@ -1164,11 +1164,206 @@ class Component extends DCLogic {
     );
   }
 
+  /* ══ WEEKLY VIEW ═══════════════════════════════════ */
+  iconCalendar(){
+    return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},
+      React.createElement('rect',{x:1,y:2,width:14,height:13,rx:2}),
+      React.createElement('path',{d:'M1 6h14'}),
+      React.createElement('path',{d:'M5 1v2'}),
+      React.createElement('path',{d:'M11 1v2'})
+    );
+  }
+
+  buildWeeklyView(){
+    const{e}=this;
+    const weeklyViewWeek=this.state.weeklyViewWeek||'w_jun26';
+    const wIdx=this.WEEKS.findIndex(w=>w.id===weeklyViewWeek);
+    const selW=this.WEEKS[wIdx]||this.WEEKS[this.WEEKS.length-1];
+    const prevW=wIdx>0?this.WEEKS[wIdx-1]:null;
+    const nextW=wIdx<this.WEEKS.length-1?this.WEEKS[wIdx+1]:null;
+
+    const members=this.getMembers();
+    const ps=this.getProjects().filter(p=>!['Completed','Archived'].includes(p.status));
+
+    // Per-project data for selected week
+    const projData=ps.map(p=>{
+      const d=this.getProjectWeekData(p,selW);
+      return{...p,wkActual:d.actual||0,wkPlanned:d.planned||0};
+    }).filter(p=>p.wkPlanned>0||p.wkActual>0)
+      .sort((a,b)=>(b.wkActual||b.wkPlanned)-(a.wkActual||a.wkPlanned));
+
+    // Per-member summary
+    const memData=members.map(m=>{
+      const{actual,planned}=this.getOwnerWeekData(m,weeklyViewWeek);
+      const pto=this.getMemberPTO(m,weeklyViewWeek);
+      const pct=planned>0?Math.round(actual/planned*100):null;
+      const bc=pct===null?'#c4cdd6':pct>=90?this.GREEN:pct>=70?this.BLUE:pct>=50?this.AMBER:this.RED;
+      const mProjs=projData.filter(p=>p.owner===m);
+      return{m,actual,planned,pto,pct,bc,mProjs};
+    });
+
+    // Team totals
+    const totAct=memData.reduce((s,d)=>s+d.actual,0);
+    const totPlan=memData.reduce((s,d)=>s+d.planned,0);
+    const totUtil=totPlan>0?Math.round(totAct/totPlan*100):0;
+    const prevTotAct=prevW?members.reduce((s,m)=>s+this.getOwnerWeekData(m,prevW.id).actual,0):null;
+    const weekDelta=prevTotAct!==null?Math.round((totAct-prevTotAct)*10)/10:null;
+    const behind=memData.filter(d=>d.pct!==null&&d.pct<80).length;
+
+    const kpis=[
+      {v:Math.round(totAct*10)/10+'h',l:'Team hours logged',n:selW.short+' total',c:null},
+      {v:totUtil+'%',l:'Delivery rate',n:'actual ÷ planned',c:totUtil>=90?this.GREEN:totUtil>=75?this.BLUE:this.AMBER},
+      {v:projData.length+'',l:'Projects active',n:'with hours this week',c:null},
+      weekDelta!==null
+        ?{v:(weekDelta>0?'+':'')+weekDelta+'h',l:'vs last week',n:(prevW?prevW.short:'—')+' → '+selW.short,c:weekDelta>=0?this.GREEN:this.AMBER}
+        :{v:behind+'',l:'Below 80% plan',n:'members this week',c:behind===0?this.GREEN:this.AMBER}
+    ];
+
+    const MAX_BAR=48;
+
+    // Member cards
+    const memberCards=memData.map(d=>
+      e('div',{key:d.m,style:{flex:'1 1 180px',minWidth:160,maxWidth:250,background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'18px'}},
+        e('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:14}},
+          e('div',{style:{width:34,height:34,borderRadius:'50%',background:this.BLUE+'22',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+            e('span',{style:{fontSize:13,fontWeight:700,color:this.BLUE}},d.m[0])
+          ),
+          e('div',null,
+            e('div',{style:{fontSize:14,fontWeight:600,color:this.NAVY,lineHeight:1}},d.m),
+            e('div',{style:{fontSize:11,color:this.GRAY,marginTop:2}},d.mProjs.length+' project'+(d.mProjs.length!==1?'s':''))
+          )
+        ),
+        e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}},
+          e('span',{style:{fontSize:24,fontWeight:700,color:d.bc,fontVariantNumeric:'tabular-nums',lineHeight:1}},d.actual+'h'),
+          d.pct!==null&&e('span',{style:{fontSize:13,fontWeight:600,color:d.bc,background:d.bc+'18',padding:'2px 8px',borderRadius:9999}},d.pct+'%')
+        ),
+        e('div',{style:{fontSize:11,color:this.GRAY,marginBottom:8}},d.planned>0?'Planned '+d.planned+'h'+(d.pto>0?' · '+d.pto+'h PTO':''):'No hours planned'),
+        e('div',{style:{position:'relative',height:6,background:'#e4e9ef',borderRadius:3,overflow:'hidden',marginBottom:d.mProjs.length>0?12:0}},
+          d.planned>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(d.planned/MAX_BAR*100,100)+'%',background:'#c4d8ec'}}),
+          d.actual>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(d.actual/MAX_BAR*100,115)+'%',background:d.bc,zIndex:1}})
+        ),
+        d.mProjs.length>0&&e('div',{style:{borderTop:'1px solid #f0f4f8',paddingTop:10,display:'flex',flexDirection:'column',gap:5}},
+          ...d.mProjs.slice(0,4).map(p=>
+            e('div',{key:p.name,style:{display:'flex',justifyContent:'space-between',alignItems:'center',gap:4}},
+              e('div',{style:{display:'flex',alignItems:'center',gap:5,minWidth:0,overflow:'hidden'}},
+                e('div',{style:{width:3,height:10,borderRadius:1,background:this.TC[p.type]||this.BLUE,flexShrink:0}}),
+                e('span',{style:{fontSize:11,color:'#3d4f62',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}},p.name.length>22?p.name.slice(0,20)+'…':p.name)
+              ),
+              e('span',{style:{fontSize:11,fontWeight:600,color:this.NAVY,flexShrink:0,fontVariantNumeric:'tabular-nums'}},(p.wkActual>0?p.wkActual:p.wkPlanned)+'h')
+            )
+          ),
+          d.mProjs.length>4&&e('div',{style:{fontSize:10,color:this.GRAY}},'+'+( d.mProjs.length-4)+' more')
+        )
+      )
+    );
+
+    // Project table rows
+    const projRows=projData.map(p=>{
+      const tc=this.TC[p.type]||this.BLUE;
+      const phc=this.PC[p.currentPhase]||this.GRAY;
+      const vari=p.wkPlanned>0&&p.wkActual>0?Math.round((p.wkActual-p.wkPlanned)*10)/10:null;
+      return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
+        e('td',{style:{padding:'10px 12px'}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:7}},
+            e('div',{style:{width:3,height:15,borderRadius:2,background:tc,flexShrink:0}}),
+            e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY}},p.name)
+          )
+        ),
+        e('td',{style:{padding:'10px 12px',fontSize:12,color:this.GRAY}},p.owner),
+        e('td',{style:{padding:'10px 12px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
+        e('td',{style:{padding:'10px 12px',textAlign:'right',fontSize:12,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},p.wkPlanned>0?p.wkPlanned+'h':'—'),
+        e('td',{style:{padding:'10px 12px',textAlign:'right',fontSize:13,fontWeight:600,color:p.wkActual>0?this.NAVY:'#bbc4cf',fontVariantNumeric:'tabular-nums'}},p.wkActual>0?p.wkActual+'h':'—'),
+        e('td',{style:{padding:'10px 12px',textAlign:'right'}},
+          vari!==null?e('span',{style:{fontSize:11,fontWeight:500,color:this.vc(vari)}},(vari>0?'+':'')+vari+'h'):e('span',{style:{color:'#dde4eb',fontSize:11}},'—')
+        )
+      );
+    });
+
+    const totProjPlan=Math.round(projData.reduce((s,p)=>s+p.wkPlanned,0)*10)/10;
+    const totProjAct=Math.round(projData.reduce((s,p)=>s+p.wkActual,0)*10)/10;
+
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px 32px'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',display:'flex',justifyContent:'space-between',alignItems:'flex-end',flexWrap:'wrap',gap:16}},
+          e('div',null,
+            e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'Weekly Review'),
+            e('h1',{style:{fontSize:'clamp(24px,4vw,40px)',fontWeight:300,color:'#fff',margin:'0 0 6px',letterSpacing:'-0.02em'}},selW.short+' 2026'),
+            e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6,fontWeight:300}},
+              selW.current?'Current week — log hours to update actuals.':
+              selW.isFuture?'Future week — no actuals yet.':
+              'Historical actuals for week ending '+selW.short+'.'
+            )
+          ),
+          e('div',{style:{display:'flex',alignItems:'center',gap:8}},
+            e('button',{onClick:()=>prevW&&this.setState({weeklyViewWeek:prevW.id}),disabled:!prevW,style:{padding:'8px 16px',border:'1.5px solid rgba(255,255,255,0.2)',borderRadius:8,background:'transparent',color:prevW?'rgba(255,255,255,0.85)':'rgba(255,255,255,0.2)',fontSize:13,cursor:prevW?'pointer':'default',fontFamily:'inherit'}},'← '+(prevW?prevW.short:'—')),
+            e('button',{onClick:()=>nextW&&this.setState({weeklyViewWeek:nextW.id}),disabled:!nextW,style:{padding:'8px 16px',border:'1.5px solid rgba(255,255,255,0.2)',borderRadius:8,background:'transparent',color:nextW?'rgba(255,255,255,0.85)':'rgba(255,255,255,0.2)',fontSize:13,cursor:nextW?'pointer':'default',fontFamily:'inherit'}},(nextW?nextW.short:'—')+' →')
+          )
+        )
+      ),
+      e('div',{style:{background:'#f0f4fa',borderBottom:'1px solid #e4e9ef',overflowX:'auto'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'10px 32px',display:'flex',gap:4,alignItems:'center',flexWrap:'nowrap',minWidth:'max-content'}},
+          e('span',{style:{fontSize:10,color:'#8899aa',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginRight:8,flexShrink:0}},'Week'),
+          ...this.WEEKS.map(w=>{
+            const sel=weeklyViewWeek===w.id;
+            return e('button',{key:w.id,onClick:()=>this.setState({weeklyViewWeek:w.id}),style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:sel?600:400,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#e8f0ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},w.short);
+          })
+        )
+      ),
+      e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 32px',display:'flex',flexWrap:'wrap'}},
+          ...kpis.map((k,i)=>e('div',{key:k.l,style:{flex:'1 1 140px',padding:'20px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
+            e('div',{style:{fontSize:'clamp(28px,3vw,40px)',fontWeight:700,color:k.c||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},k.v),
+            e('div',{style:{fontSize:13,color:this.NAVY,fontWeight:500,marginTop:6}},k.l),
+            e('div',{style:{fontSize:11,color:this.GRAY,marginTop:2,fontWeight:300}},k.n)
+          ))
+        )
+      ),
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'36px 32px',display:'flex',flexDirection:'column',gap:32}},
+        e('div',null,
+          e('div',{style:{display:'flex',alignItems:'flex-start',gap:12,marginBottom:18}},
+            e('div',{style:{fontSize:10,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:3,minWidth:22}},'01'),
+            e('div',null,
+              e('h2',{style:{fontSize:17,fontWeight:500,color:this.NAVY,margin:'0 0 3px',letterSpacing:'-0.01em'}},'Team allocation'),
+              e('p',{style:{fontSize:13,color:this.GRAY,margin:0,lineHeight:1.5}},'Planned vs. actual hours per person this week.')
+            )
+          ),
+          e('div',{style:{display:'flex',gap:16,flexWrap:'wrap'}},...memberCards)
+        ),
+        e('div',{style:{height:1,background:'#e4e9ef'}}),
+        e('div',null,
+          e('div',{style:{display:'flex',alignItems:'flex-start',gap:12,marginBottom:18}},
+            e('div',{style:{fontSize:10,color:'#bbc4cf',letterSpacing:'0.12em',fontWeight:600,paddingTop:3,minWidth:22}},'02'),
+            e('div',null,
+              e('h2',{style:{fontSize:17,fontWeight:500,color:this.NAVY,margin:'0 0 3px',letterSpacing:'-0.01em'}},'Project breakdown'),
+              e('p',{style:{fontSize:13,color:this.GRAY,margin:0,lineHeight:1.5}},'All projects with hours this week, sorted by activity.')
+            )
+          ),
+          projData.length>0
+            ?e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
+                e('table',{style:{width:'100%',minWidth:500,borderCollapse:'collapse'}},
+                  e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+                    ...['Project','Owner','Phase','Planned','Actual','Variance'].map(h=>e('th',{key:h,style:{padding:'9px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Planned','Actual','Variance'].includes(h)?'right':'left'}},h))
+                  )),
+                  e('tbody',null,...projRows),
+                  e('tfoot',null,e('tr',{style:{background:'#f6f8fb',borderTop:'2px solid #e4e9ef'}},
+                    e('td',{colSpan:3,style:{padding:'9px 12px',fontSize:11,fontWeight:600,color:this.NAVY}},'Team total'),
+                    e('td',{style:{padding:'9px 12px',textAlign:'right',fontSize:12,fontWeight:700,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},totProjPlan>0?totProjPlan+'h':'—'),
+                    e('td',{style:{padding:'9px 12px',textAlign:'right',fontSize:12,fontWeight:700,color:this.NAVY,fontVariantNumeric:'tabular-nums'}},totProjAct>0?totProjAct+'h':'—'),
+                    e('td',null)
+                  ))
+                )
+              )
+            :e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'32px',textAlign:'center',color:this.GRAY,fontSize:14}},'No hours logged for this week.')
+        )
+      )
+    );
+  }
+
   renderVals(){
     const{view}=this.state;
     return{
       nav:this.buildNav(),
-      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():view==='timeline'?this.buildTimelineView():this.buildTeamView(),
+      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():view==='timeline'?this.buildTimelineView():view==='weekly'?this.buildWeeklyView():this.buildTeamView(),
       projectModal:this.buildProjectModal(),
     };
   }

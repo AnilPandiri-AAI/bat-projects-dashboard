@@ -133,6 +133,18 @@ class Component extends DCLogic {
     {name:'SAP - Columbia Impl.',owner:'Sweta',type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
     {name:'Workday Data Scramble',owner:'Anil',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:2,endMonth:5,hpw:3}]},
     {name:'Cash Auto App (Anil)',owner:'Anil',type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:6,hpw:3}]},
+    // Back Office Admin — 5h/week, all members
+    {name:'Back Office Admin',owner:'Sweta',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    {name:'Back Office Admin',owner:'Jonny',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    {name:'Back Office Admin',owner:'Anil',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    {name:'Back Office Admin',owner:'Saurabh',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    {name:'Back Office Admin',owner:'Vinay',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    // Back Office Support — 23h/week, all members
+    {name:'Back Office Support',owner:'Sweta',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
+    {name:'Back Office Support',owner:'Jonny',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
+    {name:'Back Office Support',owner:'Anil',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
+    {name:'Back Office Support',owner:'Saurabh',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
+    {name:'Back Office Support',owner:'Vinay',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
   ];
   OWNER_TOTALS={
     Sweta:{planned:[36,36,36,36],actual:[36,40,41,0]},
@@ -160,7 +172,18 @@ class Component extends DCLogic {
   }
   _applyData(d){
     const p={};
-    if(d.weeklyLog){const mig={};Object.entries(d.weeklyLog).forEach(([n,v])=>{if(v&&typeof v==='object'){const fk=Object.keys(v)[0];mig[n]=(fk&&!fk.startsWith('w_'))?{'w_jun26':v}:v;}});p.weeklyLog=mig;}
+    if(d.weeklyLog){
+      const nameToOwner={};this.DEFAULT_PROJECTS.forEach(pr=>{nameToOwner[pr.name]=pr.owner;});
+      const mig={};
+      Object.entries(d.weeklyLog).forEach(([n,v])=>{
+        if(!v||typeof v!=='object')return;
+        const fk=Object.keys(v)[0];
+        const v2=(fk&&!fk.startsWith('w_'))?{'w_jun26':v}:v;
+        const newKey=n.includes('|')?n:(nameToOwner[n]?n+'|'+nameToOwner[n]:n);
+        mig[newKey]=v2;
+      });
+      p.weeklyLog=mig;
+    }
     if(d.members)p.members=d.members;
     if(d.projects)p.projects=d.projects;
     if(d.ptoLog)p.ptoLog=d.ptoLog;
@@ -182,7 +205,7 @@ class Component extends DCLogic {
   getProjects(){
     const base=this.state.projects||this.DEFAULT_PROJECTS;
     return base.map(p=>{
-      const log=this.state.weeklyLog[p.name];if(!log)return p;
+      const log=this.state.weeklyLog[this.wlogKey(p)];if(!log)return p;
       const a8=[...p.actual8w],p4=[...p.planned4w];
       this.WEEKS.forEach(w=>{const ov=log[w.id];if(!ov)return;if(w.actualIdx!==null&&ov.actual!=null)a8[w.actualIdx]=ov.actual;if(w.plannedIdx!==null&&ov.planned!=null)p4[w.plannedIdx]=ov.planned;});
       const w0=log['w_jun26'];if(w0?.planned!=null)p4[3]=w0.planned;
@@ -199,7 +222,7 @@ class Component extends DCLogic {
     const wk=this.WEEKS.find(w=>w.id===weekId);
     const entries={};
     this.getProjects().filter(p=>p.owner===member&&!['Completed','Archived'].includes(p.status)).forEach(p=>{
-      const ov=this.state.weeklyLog[p.name]?.[weekId];
+      const ov=this.state.weeklyLog[this.wlogKey(p)]?.[weekId];
       const dA=wk&&wk.actualIdx!==null?p.actual8w[wk.actualIdx]:'';
       const dP=wk&&wk.plannedIdx!==null?p.planned4w[wk.plannedIdx]:weekId==='w_jun26'?p.planned4w[3]:'';
       entries[p.name]={planned:ov?.planned!=null?ov.planned:dP,actual:ov?.actual!=null?ov.actual:(dA||'')};
@@ -207,18 +230,19 @@ class Component extends DCLogic {
     return entries;
   }
   estTotal(phases){return phases.reduce((s,ph)=>s+ph.hpw*(ph.endMonth-ph.startMonth+1)*4.33,0);}
-  actTotal(p){return p.actual8w.reduce((s,v)=>s+v,0)+Object.values(this.state.weeklyLog[p.name]||{}).reduce((s,w)=>s+(w?.actual||0),0);}
+  actTotal(p){return p.actual8w.reduce((s,v)=>s+v,0)+Object.values(this.state.weeklyLog[this.wlogKey(p)]||{}).reduce((s,w)=>s+(w?.actual||0),0);}
   getOwnerWeekData(owner,weekId){
     const w=this.WEEKS.find(x=>x.id===weekId);
     if(!w)return{actual:0,planned:0};
     const ps=this.getProjects().filter(p=>p.owner===owner&&!['Completed','Archived'].includes(p.status));
     let actual=0,planned=0;
     ps.forEach(p=>{
-      if(w.current){actual+=this.state.weeklyLog[p.name]?.[weekId]?.actual||0;planned+=p.planned4w[3]||0;}
+      if(w.current){actual+=this.state.weeklyLog[this.wlogKey(p)]?.[weekId]?.actual||0;planned+=p.planned4w[3]||0;}
       else{if(w.actualIdx!==null)actual+=p.actual8w[w.actualIdx]||0;if(w.plannedIdx!==null)planned+=p.planned4w[w.plannedIdx]||0;}
     });
     return{actual,planned};
   }
+  wlogKey(p){return p.name+'|'+p.owner;}
   getMemberPTO(m,wid){return this.state.ptoLog[m]?.[wid]||0;}
   getBlockers(pname){return(this.state.projectComments[pname]||[]).filter(c=>c.isBlocker&&!c.resolved);}
   e(t,p,...c){return React.createElement(t,p,...c);}
@@ -390,7 +414,7 @@ class Component extends DCLogic {
   }
 
   sparkline(p){
-    const w26ac=this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0;
+    const w26ac=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
     const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:w26ac,fc:w26ac===0}];
     const mx=Math.max(1,...G.map(g=>Math.max(g.pl,g.ac)));
     const W=72,H=22,bW=16,gap=2;
@@ -569,7 +593,7 @@ class Component extends DCLogic {
   getProjectWeekData(p,w){
     let actual=null,planned=null;
     if(w.actualIdx!==null&&w.actualIdx!==undefined){const r=p.actual8w[w.actualIdx];actual=r>0?r:null;}
-    if(w.current){const log=this.state.weeklyLog[p.name]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
+    if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
     else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
     else if(w.isFuture&&w.forecastIdx!==null)planned=p.forecast[w.forecastIdx]||0;
     const phase=p.phases?p.phases.find(ph=>w.month>=ph.startMonth&&w.month<=ph.endMonth):null;
@@ -578,7 +602,7 @@ class Component extends DCLogic {
   getProjectMonthData(p,m){
     let actual=0,planned=0;
     if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
-    else if(m.month===5){actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);const w0=this.state.weeklyLog[p.name]?.['w_jun26'];if(w0?.actual!=null)actual+=w0.actual;planned=p.planned4w.reduce((s,v)=>s+v,0);}
+    else if(m.month===5){actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);const w0=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(w0?.actual!=null)actual+=w0.actual;planned=p.planned4w.reduce((s,v)=>s+v,0);}
     else if(m.month===6)planned=(p.forecast[0]||0)*4;
     else if(m.month===7)planned=(p.forecast[1]||0)*4;
     else if(m.month===8)planned=(p.forecast[2]||0)*4;
@@ -690,7 +714,7 @@ class Component extends DCLogic {
     const{e}=this,ps=this.filtered();
     const rows=ps.map(p=>{
       const mayAct=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
-      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0);
+      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)+(this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0);
       const junPlan=p.planned4w.reduce((s,v)=>s+v,0);
       const pct=junPlan>0?Math.round(junAct/junPlan*100):null;
       const tc=this.TC[p.type]||this.BLUE;
@@ -711,7 +735,7 @@ class Component extends DCLogic {
       );
     });
     const totMay=ps.reduce((s,p)=>s+p.actual8w.slice(0,5).reduce((a,v)=>a+v,0),0);
-    const totJA=ps.reduce((s,p)=>s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
+    const totJA=ps.reduce((s,p)=>s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)+(this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0),0);
     const totJP=ps.reduce((s,p)=>s+p.planned4w.reduce((a,v)=>a+v,0),0);
     return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
       e('table',{style:{width:'100%',minWidth:520,borderCollapse:'collapse'}},
@@ -963,7 +987,7 @@ class Component extends DCLogic {
             e('button',{onClick:()=>this.setState({logEntries:{}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Clear'),
             e('button',{onClick:()=>{
               const nl={...this.state.weeklyLog};
-              Object.entries(logEntries).forEach(([n,v])=>{if(v.planned!==''||v.actual!==''){if(!nl[n])nl[n]={};nl[n][logWeek]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};}});
+              ps.forEach(p=>{const v=logEntries[p.name]||{};if(v.planned!==''||v.actual!==''){const k=this.wlogKey(p);if(!nl[k])nl[k]={};nl[k][logWeek]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};}});
               // Save PTO to persistent store too
               this.persist({weeklyLog:nl,ptoLog:this.state.ptoLog});
               this.setState({logSaved:true});
@@ -1055,7 +1079,7 @@ class Component extends DCLogic {
     const getVal=(p,w)=>{
       let actual=null,planned=null;
       if(w.actualIdx!==null&&w.actualIdx!==undefined){const v=p.actual8w[w.actualIdx];actual=v>0?v:null;}
-      if(w.current){const log=this.state.weeklyLog[p.name]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
+      if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
       else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
       else if(w.isFuture&&w.forecastIdx!==null&&w.forecastIdx!==undefined)planned=p.forecast[w.forecastIdx]||0;
       return{actual,planned};

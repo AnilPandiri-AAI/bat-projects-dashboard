@@ -53,62 +53,71 @@ async function spWrite(data) {
 }
 </script>
 <script>
+/* ── Dynamic calendar: weeks (Friday-anchored) and months auto-extend ─────────
+   History anchor: May 1, 2026 (a Friday). Generates past weeks + 20 weeks ahead.
+   MONTH_OPTS covers 3 years so project phases can span far into the future.
+──────────────────────────────────────────────────────────────────────────── */
+function _computeCalendar(today){
+  const MA=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
+  const MS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const dow=today.getDay(),dF=(5-dow+7)%7;
+  const cf=new Date(today);cf.setDate(today.getDate()+dF);cf.setHours(0,0,0,0);
+  const cfMs=cf.getTime();
+  const fe=new Date(cf);fe.setDate(cf.getDate()+20*7);
+  const allWeeks=[],weeks=[];
+  let d=new Date(2026,4,1),seq=0;
+  while(d<=fe){
+    const mo=d.getMonth(),dy=d.getDate(),yr=d.getFullYear();
+    const dMs=d.getTime(),isCur=dMs===cfMs,isFut=dMs>cfMs;
+    const w={id:'w_'+MA[mo]+dy,short:MS[mo]+' '+dy,month:mo,year:yr,startMs:dMs,
+              actualIdx:seq<8?seq:null,plannedIdx:(seq>=5&&seq<=8)?(seq-5):null,
+              forecastIdx:null,isFuture:isFut,current:isCur};
+    allWeeks.push(w);if(!isFut)weeks.push(w);
+    d=new Date(d);d.setDate(d.getDate()+7);seq++;
+  }
+  const months=[];let my=2026,mm=4;
+  const cap=today.getFullYear()*12+today.getMonth()+5;
+  while(my*12+mm<=cap){
+    months.push({id:MA[mm]+(my>2026?String(my).slice(2):''),
+      label:MS[mm]+(my>2026?' '+String(my).slice(2):''),
+      month:mm,year:my,monthOffset:(my-2026)*12+mm,
+      isFuture:my>today.getFullYear()||(my===today.getFullYear()&&mm>today.getMonth()),
+      current:my===today.getFullYear()&&mm===today.getMonth()});
+    mm++;if(mm>11){mm=0;my++;}
+  }
+  const curW=weeks.find(w=>w.current)||weeks[weeks.length-1];
+  return{allWeeks,weeks,months,currentWeekId:curW?curW.id:'w_jun26'};
+}
+const _CAL=_computeCalendar(new Date());
+
 class Component extends DCLogic {
   state = {
     view:'dashboard',
     filterType:'All',filterOwner:'All',expandedProject:null,
     timelineView:'monthly',timelineOffset:0,
-    dashWeek:'w_jun26',
+    dashWeek:_CAL.currentWeekId,
     projectFilter:'active',
     showProjectModal:false,editProjectId:null,
     projectForm:{name:'',owners:['Sweta'],type:'Transform',status:'Implementation',phases:[]},
-    logMember:'Sweta',logWeek:'w_jun26',logEntries:{},logSaved:false,
+    logMember:'Sweta',logWeek:_CAL.currentWeekId,logEntries:{},logSaved:false,
     ptoLog:{},projectComments:{},commentForm:{author:'Sweta',text:'',isBlocker:false},
     newMember:{name:'',capacity:40},
-    weeklyLog:{},members:null,projects:null,weeklyViewWeek:'w_jun26',
+    weeklyLog:{},members:null,projects:null,weeklyViewWeek:_CAL.currentWeekId,
   };
 
   NAVY='#1b2d44';BLUE='#4778a8';GREEN='#2ea86a';AMBER='#d98f28';RED='#c73a3a';GRAY='#9aaabb';
   TC={Transform:'#4778a8',Grow:'#2ea86a',Run:'#d98f28',Agent:'#7055c0'};
   PC={'Analysis':'#7055c0','Implementation':'#4778a8','Testing':'#d98f28','Go-live':'#2ea86a','Support':'#6b7d94','Assessment':'#9aaabb','RFP':'#c73a3a'};
 
-  WEEKS=[
-    {id:'w_may1', short:'May 1',  month:4,actualIdx:0,plannedIdx:null},
-    {id:'w_may8', short:'May 8',  month:4,actualIdx:1,plannedIdx:null},
-    {id:'w_may15',short:'May 15', month:4,actualIdx:2,plannedIdx:null},
-    {id:'w_may22',short:'May 22', month:4,actualIdx:3,plannedIdx:null},
-    {id:'w_may29',short:'May 29', month:4,actualIdx:4,plannedIdx:null},
-    {id:'w_jun5', short:'Jun 5',  month:5,actualIdx:5,plannedIdx:0},
-    {id:'w_jun12',short:'Jun 12', month:5,actualIdx:6,plannedIdx:1},
-    {id:'w_jun19',short:'Jun 19', month:5,actualIdx:7,plannedIdx:2},
-    {id:'w_jun26',short:'Jun 26 ▶',month:5,actualIdx:null,plannedIdx:3,current:true},
-  ];
-  ALL_WEEKS=[
-    {id:'w_may1', short:'May 1', month:4,actualIdx:0,plannedIdx:null,forecastIdx:null,isFuture:false},
-    {id:'w_may8', short:'May 8', month:4,actualIdx:1,plannedIdx:null,forecastIdx:null,isFuture:false},
-    {id:'w_may15',short:'May 15',month:4,actualIdx:2,plannedIdx:null,forecastIdx:null,isFuture:false},
-    {id:'w_may22',short:'May 22',month:4,actualIdx:3,plannedIdx:null,forecastIdx:null,isFuture:false},
-    {id:'w_may29',short:'May 29',month:4,actualIdx:4,plannedIdx:null,forecastIdx:null,isFuture:false},
-    {id:'w_jun5', short:'Jun 5', month:5,actualIdx:5,plannedIdx:0,forecastIdx:null,isFuture:false},
-    {id:'w_jun12',short:'Jun 12',month:5,actualIdx:6,plannedIdx:1,forecastIdx:null,isFuture:false},
-    {id:'w_jun19',short:'Jun 19',month:5,actualIdx:7,plannedIdx:2,forecastIdx:null,isFuture:false},
-    {id:'w_jun26',short:'Jun 26',month:5,actualIdx:null,plannedIdx:3,forecastIdx:null,isFuture:false,current:true},
-    {id:'w_jul3', short:'Jul 3', month:6,actualIdx:null,plannedIdx:null,forecastIdx:0,isFuture:true},
-    {id:'w_jul10',short:'Jul 10',month:6,actualIdx:null,plannedIdx:null,forecastIdx:1,isFuture:true},
-    {id:'w_jul17',short:'Jul 17',month:6,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
-    {id:'w_jul24',short:'Jul 24',month:6,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
-    {id:'w_jul31',short:'Jul 31',month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
-    {id:'w_aug7', short:'Aug 7', month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
-    {id:'w_aug14',short:'Aug 14',month:7,actualIdx:null,plannedIdx:null,forecastIdx:2,isFuture:true},
-  ];
-  MONTHS=[
-    {id:'may',label:'May',month:4,isFuture:false},
-    {id:'jun',label:'Jun',month:5,isFuture:false},
-    {id:'jul',label:'Jul',month:6,isFuture:true},
-    {id:'aug',label:'Aug',month:7,isFuture:true},
-    {id:'sep',label:'Sep',month:8,isFuture:true},
-  ];
-  MONTH_OPTS=['Jan 26','Feb 26','Mar 26','Apr 26','May 26','Jun 26','Jul 26','Aug 26','Sep 26','Oct 26','Nov 26','Dec 26','Jan 27','Feb 27','Mar 27','Apr 27','May 27','Jun 27'].map((l,i)=>({label:l,value:i}));
+  WEEKS=_CAL.weeks;
+  ALL_WEEKS=_CAL.allWeeks;
+  MONTHS=_CAL.months;
+  // 36 months (Jan 2026 – Dec 2028) so phases can span multi-year projects
+  MONTH_OPTS=Array.from({length:36},(_,i)=>{
+    const y=2026+Math.floor(i/12);
+    const n=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return{label:n[i%12]+' '+String(y).slice(2),value:i};
+  });
 
   DEFAULT_MEMBERS=['Sweta','Jonny','Anil','Saurabh','Vinay'];
   DEFAULT_PROJECTS=[
@@ -222,7 +231,6 @@ class Component extends DCLogic {
       const log=this.state.weeklyLog[this.wlogKey(p)];if(!log)return p;
       const a8=[...p.actual8w],p4=[...p.planned4w];
       this.WEEKS.forEach(w=>{const ov=log[w.id];if(!ov)return;if(w.actualIdx!==null&&ov.actual!=null)a8[w.actualIdx]=ov.actual;if(w.plannedIdx!==null&&ov.planned!=null)p4[w.plannedIdx]=ov.planned;});
-      const w0=log['w_jun26'];if(w0?.planned!=null)p4[3]=w0.planned;
       return{...p,actual8w:a8,planned4w:p4};
     });
   }
@@ -233,12 +241,12 @@ class Component extends DCLogic {
     return ps;
   }
   loadWeekEntries(weekId,member){
-    const wk=this.WEEKS.find(w=>w.id===weekId);
+    const wk=this.ALL_WEEKS.find(w=>w.id===weekId)||this.WEEKS.find(w=>w.id===weekId);
     const entries={};
     this.getProjects().filter(p=>this.getOwners(p).includes(member)&&!['Completed','Archived'].includes(p.status)).forEach(p=>{
       const ov=this.state.weeklyLog[this.wlogKey(p,member)]?.[weekId];
-      const dA=wk&&wk.actualIdx!==null?p.actual8w[wk.actualIdx]:'';
-      const dP=wk&&wk.plannedIdx!==null?p.planned4w[wk.plannedIdx]:weekId==='w_jun26'?p.planned4w[3]:'';
+      const dA=wk?.actualIdx!=null?p.actual8w[wk.actualIdx]:'';
+      const dP=wk?.plannedIdx!=null?p.planned4w[wk.plannedIdx]:(wk?.isFuture?this.getPhaseHPW(p,wk.startMs):'');
       entries[p.name]={planned:ov?.planned!=null?ov.planned:dP,actual:ov?.actual!=null?ov.actual:(dA||'')};
     });
     return entries;
@@ -253,19 +261,44 @@ class Component extends DCLogic {
     return base+Object.values(this.state.weeklyLog[this.wlogKey(p)]||{}).reduce((s,w)=>s+(w?.actual||0),0);
   }
   getOwnerWeekData(owner,weekId){
-    const w=this.WEEKS.find(x=>x.id===weekId);
+    const allW=this.ALL_WEEKS;
+    const w=allW.find(x=>x.id===weekId)||this.WEEKS.find(x=>x.id===weekId);
     if(!w)return{actual:0,planned:0};
     const ps=this.getProjects().filter(p=>this.getOwners(p).includes(owner)&&!['Completed','Archived'].includes(p.status));
     let actual=0,planned=0;
     ps.forEach(p=>{
       const owners=this.getOwners(p);
       const logKey=owners.length>1?p.name+'|'+owner:this.wlogKey(p);
-      if(w.current){actual+=this.state.weeklyLog[logKey]?.['w_jun26']?.actual||(owners.length>1?p.actual8w[0]||0:0);planned+=p.planned4w[3]||0;}
-      else{if(w.actualIdx!==null)actual+=p.actual8w[w.actualIdx]||0;if(w.plannedIdx!==null)planned+=p.planned4w[w.plannedIdx]||0;}
+      if(w.current){
+        actual+=this.state.weeklyLog[logKey]?.[w.id]?.actual||(owners.length>1?p.actual8w[0]||0:0);
+        planned+=w.plannedIdx!==null?(p.planned4w[w.plannedIdx]||0):0;
+      } else if(w.isFuture){
+        actual+=this.state.weeklyLog[logKey]?.[w.id]?.actual||0;
+        planned+=this.state.weeklyLog[logKey]?.[w.id]?.planned||this.getPhaseHPW(p,w.startMs);
+      } else {
+        if(w.actualIdx!==null)actual+=(this.state.weeklyLog[logKey]?.[w.id]?.actual??p.actual8w[w.actualIdx])||0;
+        if(w.plannedIdx!==null)planned+=(this.state.weeklyLog[logKey]?.[w.id]?.planned??p.planned4w[w.plannedIdx])||0;
+      }
     });
     return{actual,planned};
   }
   getMemberPTO(m,wid){return this.state.ptoLog[m]?.[wid]||0;}
+
+  // Returns forecast h/week for a project at a given week's date, derived from phases.
+  // Falls back to legacy forecast[] array if no phase covers that period.
+  getPhaseHPW(p,weekMs){
+    if(!weekMs)return 0;
+    const d=new Date(weekMs);
+    const mo=(d.getFullYear()-2026)*12+d.getMonth(); // months since Jan 2026
+    const phase=(p.phases||[]).find(ph=>mo>=ph.startMonth&&mo<=ph.endMonth);
+    if(phase)return phase.hpw||0;
+    // Legacy fallback
+    if(p.forecast){
+      if(mo===6)return p.forecast[0]||0;
+      if(mo>=7)return p.forecast[Math.min(mo-6,p.forecast.length-1)]||0;
+    }
+    return 0;
+  }
   getBlockers(pname){return(this.state.projectComments[pname]||[]).filter(c=>c.isBlocker&&!c.resolved);}
   e(t,p,...c){return React.createElement(t,p,...c);}
   vc(v){if(!v&&v!==0)return this.GRAY;return v>=0?this.GREEN:Math.abs(v)<=2?this.AMBER:this.RED;}
@@ -310,7 +343,13 @@ class Component extends DCLogic {
           e('span',{style:{fontSize:13,fontWeight:view===id?600:400}},lbl)
         ))
       ),
-      e('div',{style:{padding:'14px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',fontSize:11,color:'rgba(255,255,255,0.22)'}},'Jun 23, 2026')
+      e('div',{style:{padding:'14px 16px',borderTop:'1px solid rgba(255,255,255,0.06)',fontSize:11,color:'rgba(255,255,255,0.22)'}},
+        new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}),
+        !SP_READY&&e('div',{style:{marginTop:4,fontSize:10,color:'#d98f28',display:'flex',alignItems:'center',gap:4}},
+          e('div',{style:{width:5,height:5,borderRadius:'50%',background:'#d98f28',flexShrink:0}}),
+          'Local only'
+        )
+      )
     );
   }
 
@@ -332,7 +371,7 @@ class Component extends DCLogic {
         e('div',{style:{maxWidth:1100,margin:'0 auto'}},
           e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'Portfolio Review'),
           e('h1',{style:{fontSize:'clamp(24px,4vw,40px)',fontWeight:300,color:'#fff',margin:'0 0 10px',letterSpacing:'-0.02em'}},'Planned, delivered, and what\'s ahead.'),
-          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,maxWidth:480,lineHeight:1.7,fontWeight:300}},'Actual vs. forecast, project phases, and team utilisation. Jun 23, 2026.')
+          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,maxWidth:480,lineHeight:1.7,fontWeight:300}},'Actual vs. forecast, project phases, and team utilisation. '+new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})+'.')
         )
       ),
       e('div',{style:{background:'#f0f4fa',borderBottom:'1px solid #e4e9ef',overflowX:'auto'}},
@@ -340,7 +379,7 @@ class Component extends DCLogic {
           e('span',{style:{fontSize:10,color:'#8899aa',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginRight:8,flexShrink:0}},'Week'),
           ...this.WEEKS.map(w=>{
             const sel=this.state.dashWeek===w.id;
-            return e('button',{key:w.id,onClick:()=>this.setState({dashWeek:w.id}),style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:sel?600:400,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#e8f0ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},w.short);
+            return e('button',{key:w.id,onClick:()=>this.setState({dashWeek:w.id}),style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:sel?600:400,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#e8f0ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},w.short+(w.current?' ▶':''));
           })
         )
       ),
@@ -500,7 +539,7 @@ class Component extends DCLogic {
   buildDetail(p){
     const{e}=this;
     const owners=this.getOwners(p);
-    const selW=this.WEEKS.find(w=>w.id===(this.state.dashWeek||'w_jun26'))||this.WEEKS[this.WEEKS.length-1];
+    const selW=this.ALL_WEEKS.find(w=>w.id===(this.state.dashWeek||_CAL.currentWeekId))||this.WEEKS[this.WEEKS.length-1];
 
     // Per-member contribution panel (only for multi-owner projects)
     let teamPanel=null;
@@ -510,8 +549,8 @@ class Component extends DCLogic {
         const log=this.state.weeklyLog[p.name+'|'+m];
         let actual=0,planned=0;
         if(selW.current){
-          actual=log?.['w_jun26']?.actual??p.actual8w[0]??0;
-          planned=log?.['w_jun26']?.planned??p.planned4w[3]??0;
+          actual=log?.[selW.id]?.actual??p.actual8w[0]??0;
+          planned=log?.[selW.id]?.planned??(selW.plannedIdx!=null?p.planned4w[selW.plannedIdx]??0:0);
         } else {
           actual=selW.actualIdx!==null?(log?.[selW.id]?.actual??p.actual8w[selW.actualIdx]??0):0;
           planned=selW.plannedIdx!==null?(log?.[selW.id]?.planned??p.planned4w[selW.plannedIdx]??0):0;
@@ -539,32 +578,57 @@ class Component extends DCLogic {
       );
     }
 
-    const WL=['May 1','May 8','May 15','May 22','May 29','Jun 5','Jun 12','Jun 19'];
-    const pts=[...p.actual8w.map((a,i)=>({label:WL[i],actual:a,planned:i>=5?p.planned4w[i-5]:null,fc:false})),
-      {label:'Jun 22',planned:p.planned4w[3],actual:null,fc:true},
-      {label:'Jun 29',planned:p.forecast[0],actual:null,fc:true},
-      {label:'Jul 6', planned:p.forecast[1],actual:null,fc:true}];
+    // Last 8 weeks of history + 4 upcoming weeks of forecast
+    const histW=this.WEEKS.slice(-8);
+    const futW=this.ALL_WEEKS.filter(w=>w.isFuture).slice(0,4);
+    const trendWs=[...histW,...futW];
+    const pts=trendWs.map(w=>{
+      if(w.isFuture){
+        const fc=this.getPhaseHPW(p,w.startMs);
+        const logged=this.state.weeklyLog[this.wlogKey(p)]?.[w.id];
+        return{label:w.short,planned:logged?.planned??fc,actual:logged?.actual??null,fc:!logged};
+      }
+      let actual=null,planned=null;
+      if(w.actualIdx!=null){actual=p.actual8w[w.actualIdx];}
+      if(w.current){const lg=this.state.weeklyLog[this.wlogKey(p)]?.[w.id];if(lg?.actual!=null)actual=lg.actual;planned=lg?.planned??(w.plannedIdx!=null?p.planned4w[w.plannedIdx]:null);}
+      else if(w.plannedIdx!=null){planned=p.planned4w[w.plannedIdx];}
+      return{label:w.short,actual,planned,fc:false};
+    });
     const mx=Math.max(1,...pts.map(d=>Math.max(d.planned||0,d.actual||0)));
     const CH=68,N=pts.length,BW=22;
-    const ML=['J','F','M','A','M','J','J','A','S'];
 
-    // Phase gantt (if phases exist)
+    // Phase Gantt — auto-scaled to the project's actual date span
     let phGantt=null;
     if(p.phases&&p.phases.length>0){
+      const allMo=p.phases.flatMap(ph=>[ph.startMonth,ph.endMonth]);
+      const minMo=Math.min(...allMo),maxMo=Math.max(...allMo);
+      const span=Math.max(maxMo-minMo+1,1);
+      const today=new Date();
+      const todayMo=(today.getFullYear()-2026)*12+today.getMonth();
+      const nowPct=Math.max(0,Math.min((todayMo-minMo)/span*100,100));
+      const MINITIALS=['J','F','M','A','M','J','J','A','S','O','N','D'];
       const bars=p.phases.map((ph,i)=>{
         const c=this.PC[ph.name]||this.GRAY;
-        const l=(ph.startMonth/9*100)+'%';
-        const w=((ph.endMonth-ph.startMonth+1)/9*100)+'%';
+        const l=((ph.startMonth-minMo)/span*100)+'%';
+        const w=((ph.endMonth-ph.startMonth+1)/span*100)+'%';
         return e('div',{key:i,style:{position:'absolute',top:0,height:20,left:l,width:w,background:c,borderRadius:3,display:'flex',alignItems:'center',padding:'0 5px',overflow:'hidden'}},
           e('span',{style:{fontSize:8,color:'#fff',fontWeight:600,whiteSpace:'nowrap'}},ph.name+(ph.hpw>0?' '+ph.hpw+'h/w':''))
         );
       });
-      const nowLine=e('div',{style:{position:'absolute',top:-1,left:(5/9*100)+'%',width:2,height:22,background:this.NAVY,opacity:0.5,borderRadius:1}});
-      const mLabels=ML.map((m,i)=>e('div',{key:m+i,style:{flex:'1 1 0',textAlign:'center',fontSize:7,color:i===5?this.BLUE:'#c4cdd6'}},m));
+      const nowLine=e('div',{style:{position:'absolute',top:-1,left:nowPct+'%',width:2,height:22,background:this.NAVY,opacity:0.5,borderRadius:1}});
+      // Month label ticks
+      const mLabels=[];
+      for(let mo=minMo;mo<=maxMo;mo++){
+        const pct=((mo-minMo)/span*100)+'%';
+        const yr=2026+Math.floor(mo/12),mm=mo%12;
+        const lbl=MINITIALS[mm]+(yr>2026?String(yr).slice(2):'');
+        mLabels.push(e('div',{key:mo,style:{position:'absolute',left:pct,fontSize:7,color:mo===todayMo?this.BLUE:'#c4cdd6',transform:'translateX(-50%)'}},lbl));
+      }
+      const rangeLabel=`${this.MONTH_OPTS[minMo]?.label||''}–${this.MONTH_OPTS[maxMo]?.label||''}`;
       phGantt=e('div',{style:{marginBottom:10}},
-        e('div',{style:{fontSize:9,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:4}},'Phase timeline (Jan–Sep 2026)'),
-        e('div',{style:{position:'relative',height:22}},...bars,nowLine),
-        e('div',{style:{display:'flex',marginTop:2}},...mLabels)
+        e('div',{style:{fontSize:9,color:this.GRAY,textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:4}},'Phase timeline ('+rangeLabel+')'),
+        e('div',{style:{position:'relative',height:20}},...bars,nowLine),
+        e('div',{style:{position:'relative',height:14,marginTop:2}},...mLabels)
       );
     }
 
@@ -575,7 +639,7 @@ class Component extends DCLogic {
       const aH=d.actual>0?Math.max(2,(d.actual/mx)*(CH-3)):0;
       const r=d.planned&&d.actual!=null?d.actual/d.planned:null;
       const fill=d.fc?'#c4d8ec':r===null?'#c4d8ec':r>=0.9?this.GREEN:r>=0.65?this.AMBER:this.RED;
-      const wkLabel=d.label.split(' ')[1]||d.label.split(' ')[0];
+      const parts=d.label.replace(' ▶','').split(' ');const wkLabel=parts[1]||parts[0];
       const els=[];
       if(pH>0)els.push(React.createElement('rect',{key:'p'+i,x,y:CH-pH,width:bw,height:pH,fill:d.fc?'#ddeef9':'#dde9f4',rx:1}));
       if(aH>0)els.push(React.createElement('rect',{key:'a'+i,x,y:CH-aH,width:bw,height:aH,fill,rx:1}));
@@ -693,54 +757,84 @@ class Component extends DCLogic {
 
   getProjectWeekData(p,w){
     const owners=this.getOwners(p);
+    // Month offset from Jan 2026 — used for phase lookup
+    const wMo=(w.year!==undefined?(w.year-2026)*12:0)+w.month;
     if(owners.length>1){
       let actual=0,planned=0;
       owners.forEach(mbr=>{
         const log=this.state.weeklyLog[p.name+'|'+mbr];
         if(w.current){
-          actual+=log?.['w_jun26']?.actual??p.actual8w[0]??0;
-          planned+=log?.['w_jun26']?.planned??p.planned4w[3]??0;
+          actual+=log?.[w.id]?.actual??p.actual8w[0]??0;
+          planned+=log?.[w.id]?.planned??(w.plannedIdx!==null?p.planned4w[w.plannedIdx]??0:0);
+        } else if(w.isFuture){
+          actual+=log?.[w.id]?.actual??0;
+          planned+=log?.[w.id]?.planned??this.getPhaseHPW(p,w.startMs);
         } else {
           actual+=(w.actualIdx!==null?(log?.[w.id]?.actual??p.actual8w[w.actualIdx]??0):0);
-          planned+=(w.plannedIdx!==null?(log?.[w.id]?.planned??p.planned4w[w.plannedIdx]??0):(w.isFuture&&w.forecastIdx!==null?p.forecast[w.forecastIdx]||0:0));
+          planned+=(w.plannedIdx!==null?(log?.[w.id]?.planned??p.planned4w[w.plannedIdx]??0):0);
         }
       });
-      const phase=p.phases?p.phases.find(ph=>w.month>=ph.startMonth&&w.month<=ph.endMonth):null;
+      const phase=p.phases?p.phases.find(ph=>wMo>=ph.startMonth&&wMo<=ph.endMonth):null;
       return{actual:actual||null,planned:planned||null,phase,isFuture:w.isFuture};
     }
     let actual=null,planned=null;
     if(w.actualIdx!==null&&w.actualIdx!==undefined){const r=p.actual8w[w.actualIdx];actual=r>0?r:null;}
-    if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
-    else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
-    else if(w.isFuture&&w.forecastIdx!==null)planned=p.forecast[w.forecastIdx]||0;
-    const phase=p.phases?p.phases.find(ph=>w.month>=ph.startMonth&&w.month<=ph.endMonth):null;
+    if(w.current){
+      const log=this.state.weeklyLog[this.wlogKey(p)]?.[w.id];
+      if(log?.actual!=null)actual=log.actual;
+      planned=log?.planned!=null?log.planned:(w.plannedIdx!==null?p.planned4w[w.plannedIdx]:0);
+    } else if(w.plannedIdx!==null&&w.plannedIdx!==undefined){
+      planned=p.planned4w[w.plannedIdx];
+    } else if(w.isFuture){
+      const logged=this.state.weeklyLog[this.wlogKey(p)]?.[w.id];
+      if(logged?.actual!=null)actual=logged.actual;
+      planned=logged?.planned!=null?logged.planned:this.getPhaseHPW(p,w.startMs);
+    }
+    const phase=p.phases?p.phases.find(ph=>wMo>=ph.startMonth&&wMo<=ph.endMonth):null;
     return{actual,planned,phase,isFuture:w.isFuture};
+  }
+  // Sum weeklyLog actuals for a given calendar month (for months beyond the initial 8-week block)
+  _monthLogActual(key,mo,yr){
+    const log=this.state.weeklyLog[key]||{};
+    return this.ALL_WEEKS.filter(w=>!w.isFuture&&w.month===mo&&w.year===yr&&w.actualIdx===null)
+      .reduce((s,w)=>s+(log[w.id]?.actual||0),0);
   }
   getProjectMonthData(p,m){
     const owners=this.getOwners(p);
+    const mo=m.monthOffset!==undefined?m.monthOffset:((m.year||2026)-2026)*12+m.month;
+    const phase=p.phases?p.phases.find(ph=>mo>=ph.startMonth&&mo<=ph.endMonth):null;
+    const hpwForecast=this.getPhaseHPW(p,new Date((m.year||2026),m.month,15).getTime());
+    const WKMO=4.33;
     if(owners.length>1){
       const mult=owners.length;
       let actual=0,planned=0;
-      if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0)*mult;
-      else if(m.month===5){
+      if(mo===4){ // May 2026 — from actual8w[0..4]
+        actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0)*mult;
+      } else if(mo===5){ // Jun 2026 — actual8w[5..7] + w_jun26 logged
         actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0)*mult;
         const w26sum=owners.reduce((s,mbr)=>s+(this.state.weeklyLog[p.name+'|'+mbr]?.['w_jun26']?.actual||0),0);
         actual+=w26sum||0;
         planned=p.planned4w.reduce((s,v)=>s+v,0)*mult;
+      } else {
+        // Jul 2026+ — sum logged actuals for this month + phase-based planned
+        actual=owners.reduce((t,mbr)=>t+this._monthLogActual(p.name+'|'+mbr,m.month,m.year||2026),0);
+        planned=hpwForecast*WKMO*mult;
       }
-      else if(m.month===6)planned=(p.forecast[0]||0)*4*mult;
-      else if(m.month===7)planned=(p.forecast[1]||0)*4*mult;
-      else if(m.month===8)planned=(p.forecast[2]||0)*4*mult;
-      const phase=p.phases?p.phases.find(ph=>m.month>=ph.startMonth&&m.month<=ph.endMonth):null;
       return{actual,planned,phase,isFuture:m.isFuture};
     }
     let actual=0,planned=0;
-    if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
-    else if(m.month===5){actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);const w0=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(w0?.actual!=null)actual+=w0.actual;planned=p.planned4w.reduce((s,v)=>s+v,0);}
-    else if(m.month===6)planned=(p.forecast[0]||0)*4;
-    else if(m.month===7)planned=(p.forecast[1]||0)*4;
-    else if(m.month===8)planned=(p.forecast[2]||0)*4;
-    const phase=p.phases?p.phases.find(ph=>m.month>=ph.startMonth&&m.month<=ph.endMonth):null;
+    if(mo===4){ // May 2026
+      actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
+    } else if(mo===5){ // Jun 2026
+      actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);
+      const w0=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];
+      if(w0?.actual!=null)actual+=w0.actual;
+      planned=p.planned4w.reduce((s,v)=>s+v,0);
+    } else {
+      // Jul 2026+ — logged actuals for this month + phase-based planned
+      actual=this._monthLogActual(this.wlogKey(p),m.month,m.year||2026);
+      planned=hpwForecast*WKMO;
+    }
     return{actual,planned,phase,isFuture:m.isFuture};
   }
 
@@ -788,7 +882,9 @@ class Component extends DCLogic {
           ...rows
         )
       ),
-      e('div',{style:{padding:'8px 14px',borderTop:'1px solid #f0f4f8',fontSize:10,color:'#bbc4cf'}},'Jun = weeks ending Jun 5–26 · Jul–Sep = current weekly rate × 4 weeks')
+      e('div',{style:{padding:'8px 14px',borderTop:'1px solid #f0f4f8',fontSize:10,color:'#bbc4cf'}},
+        'Past months = actual hours · Future months = phase h/week × 4.33 weeks'
+      )
     );
   }
 
@@ -846,50 +942,70 @@ class Component extends DCLogic {
 
   buildMonthly(){
     const{e}=this,ps=this.filtered();
+    // Show all months from MONTHS (May 2026 → current + 5)
+    const displayMonths=this.MONTHS;
+    const headers=['Project','Owner',...displayMonths.map(m=>m.label)];
+    const colAlign=h=>!['Project','Owner'].includes(h)?'right':'left';
+
     const rows=ps.map(p=>{
-      const mayAct=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
-      const owners=this.getOwners(p);
-      const w26add=owners.length>1?owners.reduce((s,m)=>s+(this.state.weeklyLog[p.name+'|'+m]?.['w_jun26']?.actual||0),0):this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
-      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)*(owners.length>1?owners.length:1)+w26add;
-      const junPlan=p.planned4w.reduce((s,v)=>s+v,0);
-      const pct=junPlan>0?Math.round(junAct/junPlan*100):null;
       const tc=this.TC[p.type]||this.BLUE;
+      const mCells=displayMonths.map(m=>{
+        const d=this.getProjectMonthData(p,m);
+        const val=m.isFuture?(d.planned>0?Math.round(d.planned):0):(d.actual>0?Math.round(d.actual):0);
+        const isActual=!m.isFuture;
+        const phc=d.phase?(this.PC[d.phase.name]||this.BLUE):'#bbc4cf';
+        const style={padding:'9px 10px',fontSize:12,textAlign:'right',fontVariantNumeric:'tabular-nums',
+          color:isActual?(val>0?this.NAVY:this.GRAY):phc,
+          fontWeight:m.current?600:400,
+          background:m.current?'#f0f5ff':m.isFuture?'#fafbfc':'transparent'};
+        return e('td',{key:m.id,style},
+          val>0?(m.isFuture?'~'+val+'h':val+'h'):'—'
+        );
+      });
       return e('tr',{key:p.name,style:{borderBottom:'1px solid #e4e9ef'}},
-        e('td',{style:{padding:'10px 10px'}},e('div',{style:{display:'flex',alignItems:'center',gap:7}},e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),e('span',{style:{fontSize:12,fontWeight:500,color:this.NAVY}},p.name))),
-        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
-        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},mayAct>0?mayAct+'h':'—'),
-        e('td',{style:{padding:'10px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junAct>0?junAct+'h':'—'),
-        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junPlan>0?junPlan+'h':'—'),
-        e('td',{style:{padding:'10px 10px',textAlign:'right'}},
-          pct!==null&&junPlan>0
-            ?e('div',{style:{display:'flex',alignItems:'center',gap:7,justifyContent:'flex-end'}},
-                e('div',{style:{width:48,height:5,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},e('div',{style:{height:'100%',width:Math.min(pct,100)+'%',background:pct>=80?this.GREEN:pct>=60?this.AMBER:this.RED,borderRadius:3}})),
-                e('span',{style:{fontSize:11,fontWeight:500,color:pct>=80?this.GREEN:pct>=60?this.AMBER:this.RED,minWidth:28,fontVariantNumeric:'tabular-nums'}},pct+'%')
-              )
-            :e('span',{style:{color:'#dde4eb',fontSize:11}},'—')
-        )
+        e('td',{style:{padding:'9px 10px'}},
+          e('div',{style:{display:'flex',alignItems:'center',gap:7}},
+            e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),
+            e('span',{style:{fontSize:12,fontWeight:500,color:this.NAVY}},p.name)
+          )
+        ),
+        e('td',{style:{padding:'9px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},
+          this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')
+        ),
+        ...mCells
       );
     });
-    const totMay=ps.reduce((s,p)=>s+p.actual8w.slice(0,5).reduce((a,v)=>a+v,0),0);
-    const totJA=ps.reduce((s,p)=>{
-      const ow=this.getOwners(p);
-      const w26add=ow.length>1?ow.reduce((a,m)=>a+(this.state.weeklyLog[p.name+'|'+m]?.['w_jun26']?.actual||0),0):this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
-      return s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)*(ow.length>1?ow.length:1)+w26add;
-    },0);
-    const totJP=ps.reduce((s,p)=>s+p.planned4w.reduce((a,v)=>a+v,0),0);
+
+    // Totals row
+    const totals=displayMonths.map(m=>{
+      const tot=ps.reduce((s,p)=>{const d=this.getProjectMonthData(p,m);return s+(m.isFuture?d.planned:d.actual);},0);
+      return e('td',{key:m.id,style:{padding:'9px 10px',fontSize:12,fontWeight:700,textAlign:'right',
+        color:this.NAVY,fontVariantNumeric:'tabular-nums',
+        background:m.current?'#f0f5ff':m.isFuture?'#fafbfc':'transparent'}},
+        tot>0?(m.isFuture?'~'+Math.round(tot)+'h':Math.round(tot)+'h'):'—'
+      );
+    });
+
     return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
-      e('table',{style:{width:'100%',minWidth:520,borderCollapse:'collapse'}},
+      e('table',{style:{width:'100%',minWidth:400,borderCollapse:'collapse'}},
         e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
-          ...['Project','Owner','May actual','Jun actual','Jun planned','Delivery'].map(h=>e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['May actual','Jun actual','Jun planned','Delivery'].includes(h)?'right':'left'}},h))
+          ...headers.map((h,i)=>{
+            const m=displayMonths[i-2];
+            const bg=m?.current?'#f0f5ff':m?.isFuture?'#fafbfc':'transparent';
+            return e('th',{key:h,style:{padding:'9px 10px',fontSize:10,fontWeight:600,color:this.GRAY,
+              letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',
+              textAlign:colAlign(h),background:bg}},
+              h,
+              m&&e('div',{style:{fontSize:8,color:'#bbc4cf',fontWeight:400,marginTop:1,textTransform:'lowercase',letterSpacing:0}},
+                m.current?'current':m.isFuture?'forecast':'actual')
+            );
+          })
         )),
         e('tbody',null,...rows),
         e('tfoot',null,e('tr',{style:{background:'#f6f8fb',borderTop:'2px solid #e4e9ef'}},
           e('td',{style:{padding:'9px 10px',fontSize:11,fontWeight:600,color:this.NAVY}},'Total'),
           e('td',{style:{padding:'9px 10px'}}),
-          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},totMay+'h'),
-          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},Math.round(totJA)+'h'),
-          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},Math.round(totJP)+'h'),
-          e('td',{style:{padding:'9px 10px',fontSize:12,fontWeight:700,textAlign:'right',color:totJP>0&&totJA/totJP>=0.8?this.GREEN:this.AMBER,fontVariantNumeric:'tabular-nums'}},totJP>0?Math.round(totJA/totJP*100)+'%':'—')
+          ...totals
         ))
       )
     );
@@ -1060,14 +1176,20 @@ class Component extends DCLogic {
         e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',padding:'20px'}},
           e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginBottom:12}},'Select week'),
           e('div',{style:{display:'flex',gap:20,flexWrap:'wrap'}},
-            ...['May','Jun'].map(mo=>e('div',{key:mo},
-              e('div',{style:{fontSize:11,color:'#bbc4cf',fontWeight:600,marginBottom:6}},mo+' 2026'),
+            ...Object.entries(
+              this.WEEKS.reduce((acc,w)=>{
+                const key=(w.year||2026)+'-'+w.month;
+                if(!acc[key])acc[key]={label:['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][w.month]+' '+(w.year||2026),weeks:[]};
+                acc[key].weeks.push(w);return acc;
+              },{})
+            ).map(([key,grp])=>e('div',{key},
+              e('div',{style:{fontSize:11,color:'#bbc4cf',fontWeight:600,marginBottom:6}},grp.label),
               e('div',{style:{display:'flex',gap:5,flexWrap:'wrap'}},
-                ...this.WEEKS.filter(w=>w.month===(mo==='May'?4:5)).map(w=>{
+                ...grp.weeks.map(w=>{
                   const sel=w.id===logWeek;
                   const hasData=Object.keys(this.state.weeklyLog).some(n=>this.state.weeklyLog[n]?.[w.id]);
                   return e('button',{key:w.id,onClick:()=>{const ent=this.loadWeekEntries(w.id,logMember);this.setState({logWeek:w.id,logEntries:ent});},style:{padding:'6px 12px',borderRadius:7,fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',position:'relative',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#f0f4ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},
-                    w.short,
+                    w.short+(w.current?' ▶':''),
                     hasData&&!sel&&e('span',{style:{position:'absolute',top:2,right:2,width:5,height:5,borderRadius:'50%',background:this.GREEN,display:'block'}})
                   );
                 })
@@ -1181,11 +1303,31 @@ class Component extends DCLogic {
             e('button',{onClick:()=>{if(!newMember.name.trim())return;this.persist({members:[...members,newMember.name.trim()],newMember:{name:'',capacity:40}});},style:{padding:'8px 18px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add member')
           )
         ),
-        // Future DB callout
-        e('div',{style:{background:'#f0f5ff',borderRadius:10,padding:'14px 18px',border:'1px solid #d0dff5'}},
-          e('div',{style:{fontSize:13,fontWeight:600,color:this.NAVY,marginBottom:4}},'Future enhancement: Shared database'),
-          e('div',{style:{fontSize:12,color:'#4778a8',lineHeight:1.6}},'Connect to Supabase, SharePoint Lists, or Airtable so every team member syncs in real time from any device. New members added here will instantly appear for the whole team. Estimated effort: 1 day with IT support.')
-        ),
+        // Sharing status callout
+        SP_READY
+          ? e('div',{style:{background:'#e8f5ef',borderRadius:10,padding:'14px 18px',border:'1px solid #b2dfc8',display:'flex',alignItems:'center',gap:12}},
+              e('div',{style:{width:10,height:10,borderRadius:'50%',background:this.GREEN,flexShrink:0}}),
+              e('div',null,
+                e('div',{style:{fontSize:13,fontWeight:600,color:this.GREEN}}),'SharePoint sync active — all team members share the same data. Polling every 30s.'
+              )
+            )
+          : e('div',{style:{background:'#fff8ec',borderRadius:10,padding:'16px 20px',border:'1px solid #f5d8a0'}},
+              e('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+                e('div',{style:{width:8,height:8,borderRadius:'50%',background:this.AMBER,flexShrink:0}}),
+                e('div',{style:{fontSize:13,fontWeight:600,color:'#8a5a00'}}),'Local only — data stays in this browser. Enable sharing so the whole team sees the same dashboard.'
+              ),
+              e('div',{style:{fontSize:12,color:'#9b7a3a',lineHeight:1.7,marginBottom:12}},'To share with your team, set up two Power Automate HTTP flows in SharePoint and paste the trigger URLs into the HTML file.'),
+              e('ol',{style:{fontSize:12,color:'#9b7a3a',lineHeight:2,margin:'0 0 12px 16px',padding:0}},
+                e('li',null,'In Power Automate, create a "GET" flow that reads a JSON item from a SharePoint list and returns it. Copy the HTTP trigger URL.'),
+                e('li',null,'Create a "POST" flow that receives JSON in the body and writes it to the same SharePoint list item.'),
+                e('li',null,'Open BAT Projects Dashboard.html in a text editor. Find SP_READ_URL and SP_WRITE_URL near the top of the script and replace the placeholder strings with your two flow URLs.'),
+                e('li',null,'Host the HTML file on a SharePoint page or shared drive so everyone opens the same file.'),
+                e('li',null,'Done — the dashboard polls SharePoint every 30 seconds so all users stay in sync.')
+              ),
+              e('div',{style:{fontSize:11,color:'#bba060',background:'#fff3d4',borderRadius:6,padding:'8px 12px'}},
+                '💡 Quick test: Set both URLs, open the file in two browsers, log hours in one — the other updates within 30 s.'
+              )
+            ),
         // Member list
         e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'auto'}},
           e('table',{style:{width:'100%',borderCollapse:'collapse'}},
@@ -1195,7 +1337,7 @@ class Component extends DCLogic {
             e('tbody',null,...members.map(m=>{
               const active=this.getProjects().filter(p=>this.getOwners(p).includes(m)&&!['Completed','Archived'].includes(p.status)).length;
               const cap=(this.OWNER_TOTALS[m]?.planned||[40])[0];
-              const pto=this.getMemberPTO(m,'w_jun26');
+              const pto=this.getMemberPTO(m,_CAL.currentWeekId);
               return e('tr',{key:m,style:{borderBottom:'1px solid #f0f4f8'}},
                 e('td',{style:{padding:'14px 16px'}},
                   e('div',{style:{display:'flex',alignItems:'center',gap:10}},
@@ -1230,24 +1372,8 @@ class Component extends DCLogic {
     if(filterType!=='All')ps=ps.filter(p=>p.type===filterType);
     const COL=84,LABEL=190;
 
-    const getVal=(p,w)=>{
-      const owners=this.getOwners(p);
-      if(owners.length>1){
-        let actual=0,planned=0;
-        owners.forEach(mbr=>{
-          const log=this.state.weeklyLog[p.name+'|'+mbr];
-          if(w.current){actual+=log?.['w_jun26']?.actual??p.actual8w[0]??0;planned+=log?.['w_jun26']?.planned??p.planned4w[3]??0;}
-          else{actual+=(w.actualIdx!==null?(log?.[w.id]?.actual??p.actual8w[w.actualIdx]??0):0);planned+=(w.plannedIdx!==null?(log?.[w.id]?.planned??p.planned4w[w.plannedIdx]??0):(w.isFuture&&w.forecastIdx!==null?p.forecast[w.forecastIdx]||0:0));}
-        });
-        return{actual:actual||null,planned:planned||null};
-      }
-      let actual=null,planned=null;
-      if(w.actualIdx!==null&&w.actualIdx!==undefined){const v=p.actual8w[w.actualIdx];actual=v>0?v:null;}
-      if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
-      else if(w.plannedIdx!==null&&w.plannedIdx!==undefined)planned=p.planned4w[w.plannedIdx];
-      else if(w.isFuture&&w.forecastIdx!==null&&w.forecastIdx!==undefined)planned=p.forecast[w.forecastIdx]||0;
-      return{actual,planned};
-    };
+    // Delegate to the shared helper so timeline stays in sync with all other views
+    const getVal=(p,w)=>{const d=this.getProjectWeekData(p,w);return{actual:d.actual,planned:d.planned};};
 
     const hdrCells=WEEKS_FULL.map(w=>e('th',{key:w.id,style:{width:COL,minWidth:COL,padding:'8px 4px',fontSize:10,fontWeight:600,textAlign:'center',whiteSpace:'nowrap',color:w.current?this.BLUE:w.isFuture?'#bbc4cf':'#6b7d94',background:w.current?'#f0f5ff':w.isFuture?'#fafbfc':'#f6f8fb',borderBottom:'2px solid '+(w.current?this.BLUE:'#e4e9ef'),position:'sticky',top:0,zIndex:1}},
       e('div',null,w.short),
@@ -1348,7 +1474,7 @@ class Component extends DCLogic {
           e('tbody',null,...projectRows,totalsRow)
         )
       ),
-      e('div',{style:{padding:'8px 32px',background:'#f6f8fb',borderTop:'1px solid #e4e9ef',fontSize:11,color:'#bbc4cf'}},'Small = planned/forecast · Bold = actual · +/- = variance · Update Jun 26 in Log Hours')
+      e('div',{style:{padding:'8px 32px',background:'#f6f8fb',borderTop:'1px solid #e4e9ef',fontSize:11,color:'#bbc4cf'}},'Small = planned/forecast · Bold = actual · +/- = variance · Log hours in the Log Hours tab to update current week')
     );
   }
 
@@ -1364,7 +1490,7 @@ class Component extends DCLogic {
 
   buildWeeklyView(){
     const{e}=this;
-    const weeklyViewWeek=this.state.weeklyViewWeek||'w_jun26';
+    const weeklyViewWeek=this.state.weeklyViewWeek||_CAL.currentWeekId;
     const wIdx=this.WEEKS.findIndex(w=>w.id===weeklyViewWeek);
     const selW=this.WEEKS[wIdx]||this.WEEKS[this.WEEKS.length-1];
     const prevW=wIdx>0?this.WEEKS[wIdx-1]:null;

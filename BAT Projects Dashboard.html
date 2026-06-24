@@ -61,7 +61,7 @@ class Component extends DCLogic {
     dashWeek:'w_jun26',
     projectFilter:'active',
     showProjectModal:false,editProjectId:null,
-    projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]},
+    projectForm:{name:'',owners:['Sweta'],type:'Transform',status:'Implementation',phases:[]},
     logMember:'Sweta',logWeek:'w_jun26',logEntries:{},logSaved:false,
     ptoLog:{},projectComments:{},commentForm:{author:'Sweta',text:'',isBlocker:false},
     newMember:{name:'',capacity:40},
@@ -112,39 +112,31 @@ class Component extends DCLogic {
 
   DEFAULT_MEMBERS=['Sweta','Jonny','Anil','Saurabh','Vinay'];
   DEFAULT_PROJECTS=[
-    {name:'Aisera PMI Project',owner:'Sweta',type:'Transform',status:'Completed',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Completed',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:2,hpw:0}]},
-    {name:'AP Advance Matching',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[2,0,2,0,2,4,4,3],planned4w:[4,4,5.2,6],forecast:[3.6,2,2],currentPhase:'Implementation',phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:2},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:5.2},{id:3,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
-    {name:'Bank Integrations',owner:'Anil',type:'Transform',status:'Implementation',actual8w:[0,0,0,0,0,4,4,0],planned4w:[4,4,4,4],forecast:[4,4,4],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:4},{id:2,name:'Support',startMonth:5,endMonth:8,hpw:4}]},
-    {name:'India Functions',owner:'Saurabh',type:'Run',status:'Implementation',actual8w:[0,3,3,2,0,3,3,0],planned4w:[3,3,3,3],forecast:[1.2,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:5},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:3}]},
-    {name:'Fixed Assets / Inventory',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,10,12,0],planned4w:[10,10,10,10],forecast:[8.8,8,8],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:2,name:'Support',startMonth:5,endMonth:7,hpw:8}]},
-    {name:'Concur Integration',owner:'Anil',type:'Grow',status:'Support',actual8w:[2,2,2,2,2,2,2,2],planned4w:[2,2,2,2],forecast:[0.8,0,0],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:2,endMonth:5,hpw:2}]},
-    {name:'Dunning Letters',owner:'Saurabh',type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,1,2,0],planned4w:[1,1,0.8,1],forecast:[0.2,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1}]},
-    {name:'Blackline Re-Implementation',owner:'Sweta',type:'Grow',status:'Implementation',actual8w:[10,10,12.5,10,10,10,10,5],planned4w:[10,10,10,10],forecast:[7,5,5],currentPhase:'Implementation',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:2},{id:2,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:3,name:'Testing',startMonth:6,endMonth:7,hpw:5}]},
-    {name:'Workday HRMS RFP',owner:'Vinay',type:'Grow',status:'Assessment',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:0},{id:2,name:'RFP',startMonth:3,endMonth:4,hpw:0}]},
-    {name:'Columbia ERP Implementation',owner:'Jonny',type:'Transform',status:'Implementation',actual8w:[0,0,2,0,1,0,1,1],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',phases:[{id:1,name:'RFP',startMonth:0,endMonth:3,hpw:2},{id:2,name:'Implementation',startMonth:4,endMonth:7,hpw:2}]},
-    {name:'Recon Agent',owner:'Sweta',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,2,0],planned4w:[1,1,1,1],forecast:[1,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:1}]},
-    {name:'ASF P2P Solution',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,3,0],planned4w:[1,1,1,0],forecast:[0.6,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:0.6}]},
-    {name:'AP PO UK (A360)',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[1,1,0,0,0,0,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:0}]},
-    {name:'Cash Auto Application',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[5,0,0,0,2,2,2,2],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:4,endMonth:6,hpw:2}]},
-    {name:'Payment Buddy',owner:'Jonny',type:'Agent',status:'Implementation',actual8w:[4,0,4,0,4,4,2,2],planned4w:[2,2,6,7],forecast:[7,7,5.8],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:6},{id:2,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
-    {name:'Adopt Use Cases',owner:'Saurabh',type:'Agent',status:'Implementation',actual8w:[0,5,5,5,5,5,1,0],planned4w:[5,5,5,5],forecast:[2.6,1,1],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:5},{id:2,name:'Go-live',startMonth:6,endMonth:6,hpw:1}]},
-    {name:'Transform Flux Reports 2.0',owner:'Jonny',type:'Transform',status:'On Hold',actual8w:[5,0,8,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'On Hold',phases:[{id:1,name:'Assessment',startMonth:0,endMonth:5,hpw:0}]},
-    {name:'FPNA - Process & Agent',owner:'Sweta',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
-    {name:'SAP - Columbia Impl.',owner:'Sweta',type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
-    {name:'Workday Data Scramble',owner:'Anil',type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0],currentPhase:'Assessment',phases:[{id:1,name:'Assessment',startMonth:2,endMonth:5,hpw:3}]},
-    {name:'Cash Auto App (Anil)',owner:'Anil',type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3],currentPhase:'Implementation',phases:[{id:1,name:'Implementation',startMonth:2,endMonth:6,hpw:3}]},
+    {name:'Aisera PMI Project',owners:['Sweta'],type:'Transform',status:'Completed',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Completed',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:0,endMonth:2,hpw:0}]},
+    {name:'AP Advance Matching',owners:['Jonny'],type:'Transform',status:'Implementation',actual8w:[2,0,2,0,2,4,4,3],planned4w:[4,4,5.2,6],forecast:[3.6,2,2],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:2},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:5.2},{id:3,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
+    {name:'Bank Integrations',owners:['Anil'],type:'Transform',status:'Implementation',actual8w:[0,0,0,0,0,4,4,0],planned4w:[4,4,4,4],forecast:[4,4,4],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:4},{id:2,name:'Support',startMonth:5,endMonth:8,hpw:4}]},
+    {name:'India Functions',owners:['Saurabh'],type:'Run',status:'Implementation',actual8w:[0,3,3,2,0,3,3,0],planned4w:[3,3,3,3],forecast:[1.2,0,0],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Analysis',startMonth:0,endMonth:1,hpw:5},{id:2,name:'Implementation',startMonth:2,endMonth:5,hpw:3}]},
+    {name:'Fixed Assets / Inventory',owners:['Saurabh'],type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,10,12,0],planned4w:[10,10,10,10],forecast:[8.8,8,8],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:2,name:'Support',startMonth:5,endMonth:7,hpw:8}]},
+    {name:'Concur Integration',owners:['Anil'],type:'Grow',status:'Support',actual8w:[2,2,2,2,2,2,2,2],planned4w:[2,2,2,2],forecast:[0.8,0,0],currentPhase:'Support',statusLog:[],phases:[{id:1,name:'Support',startMonth:2,endMonth:5,hpw:2}]},
+    {name:'Dunning Letters',owners:['Saurabh'],type:'Transform',status:'Implementation',actual8w:[0,2,2,2,2,1,2,0],planned4w:[1,1,0.8,1],forecast:[0.2,0,0],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1}]},
+    {name:'Blackline Re-Implementation',owners:['Sweta'],type:'Grow',status:'Implementation',actual8w:[10,10,12.5,10,10,10,10,5],planned4w:[10,10,10,10],forecast:[7,5,5],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:2},{id:2,name:'Implementation',startMonth:3,endMonth:5,hpw:10},{id:3,name:'Testing',startMonth:6,endMonth:7,hpw:5}]},
+    {name:'Workday HRMS RFP',owners:['Vinay'],type:'Grow',status:'Assessment',actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:0,endMonth:2,hpw:0},{id:2,name:'RFP',startMonth:3,endMonth:4,hpw:0}]},
+    {name:'Columbia ERP Implementation',owners:['Jonny'],type:'Transform',status:'Implementation',actual8w:[0,0,2,0,1,0,1,1],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'RFP',startMonth:0,endMonth:3,hpw:2},{id:2,name:'Implementation',startMonth:4,endMonth:7,hpw:2}]},
+    {name:'Recon Agent',owners:['Sweta'],type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,2,0],planned4w:[1,1,1,1],forecast:[1,1,1],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:1}]},
+    {name:'ASF P2P Solution',owners:['Saurabh'],type:'Agent',status:'Implementation',actual8w:[1,1,1,1,1,1,3,0],planned4w:[1,1,1,0],forecast:[0.6,1,1],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:1},{id:2,name:'Go-live',startMonth:5,endMonth:6,hpw:0.6}]},
+    {name:'AP PO UK (A360)',owners:['Saurabh'],type:'Agent',status:'Implementation',actual8w:[1,1,0,0,0,0,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:0}]},
+    {name:'Cash Auto Application',owners:['Jonny'],type:'Agent',status:'Implementation',actual8w:[5,0,0,0,2,2,2,2],planned4w:[2,2,2,2],forecast:[2,2,2],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:4,endMonth:6,hpw:2}]},
+    {name:'Payment Buddy',owners:['Jonny'],type:'Agent',status:'Implementation',actual8w:[4,0,4,0,4,4,2,2],planned4w:[2,2,6,7],forecast:[7,7,5.8],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:2,endMonth:5,hpw:6},{id:2,name:'Testing',startMonth:5,endMonth:6,hpw:2}]},
+    {name:'Adopt Use Cases',owners:['Saurabh'],type:'Agent',status:'Implementation',actual8w:[0,5,5,5,5,5,1,0],planned4w:[5,5,5,5],forecast:[2.6,1,1],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:0,endMonth:5,hpw:5},{id:2,name:'Go-live',startMonth:6,endMonth:6,hpw:1}]},
+    {name:'Transform Flux Reports 2.0',owners:['Jonny'],type:'Transform',status:'On Hold',actual8w:[5,0,8,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'On Hold',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:0,endMonth:5,hpw:0}]},
+    {name:'FPNA - Process & Agent',owners:['Sweta'],type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
+    {name:'SAP - Columbia Impl.',owners:['Sweta'],type:'Run',status:'Assessment',actual8w:[0,0,0,0,0,3,1,0],planned4w:[0,0,0,0],forecast:[0,0,0],currentPhase:'Assessment',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:5,endMonth:7,hpw:0}]},
+    {name:'Workday Data Scramble',owners:['Anil'],type:'Transform',status:'Assessment',actual8w:[0,0,0,0,0,0,3,3],planned4w:[3,3,3,0],forecast:[0,0,0],currentPhase:'Assessment',statusLog:[],phases:[{id:1,name:'Assessment',startMonth:2,endMonth:5,hpw:3}]},
+    {name:'Cash Auto App (Anil)',owners:['Anil'],type:'Agent',status:'Implementation',actual8w:[0,0,0,0,6,4,8,4],planned4w:[0,3,3,3],forecast:[3,3,3],currentPhase:'Implementation',statusLog:[],phases:[{id:1,name:'Implementation',startMonth:2,endMonth:6,hpw:3}]},
     // Back Office Admin — 5h/week, all members
-    {name:'Back Office Admin',owner:'Sweta',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
-    {name:'Back Office Admin',owner:'Jonny',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
-    {name:'Back Office Admin',owner:'Anil',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
-    {name:'Back Office Admin',owner:'Saurabh',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
-    {name:'Back Office Admin',owner:'Vinay',type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
+    {name:'Back Office Admin',owners:['Sweta','Jonny','Anil','Saurabh','Vinay'],type:'Run',status:'Support',actual8w:[5,5,5,5,5,5,5,5],planned4w:[5,5,5,5],forecast:[5,5,5],currentPhase:'Support',statusLog:[],phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:5}]},
     // Back Office Support — 23h/week, all members
-    {name:'Back Office Support',owner:'Sweta',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
-    {name:'Back Office Support',owner:'Jonny',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
-    {name:'Back Office Support',owner:'Anil',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
-    {name:'Back Office Support',owner:'Saurabh',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
-    {name:'Back Office Support',owner:'Vinay',type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
+    {name:'Back Office Support',owners:['Sweta','Jonny','Anil','Saurabh','Vinay'],type:'Run',status:'Support',actual8w:[23,23,23,23,23,23,23,23],planned4w:[23,23,23,23],forecast:[23,23,23],currentPhase:'Support',statusLog:[],phases:[{id:1,name:'Support',startMonth:0,endMonth:17,hpw:23}]},
   ];
   OWNER_TOTALS={
     Sweta:{planned:[36,36,36,36],actual:[36,40,41,0]},
@@ -173,7 +165,7 @@ class Component extends DCLogic {
   _applyData(d){
     const p={};
     if(d.weeklyLog){
-      const nameToOwner={};this.DEFAULT_PROJECTS.forEach(pr=>{nameToOwner[pr.name]=pr.owner;});
+      const nameToOwner={};this.DEFAULT_PROJECTS.forEach(pr=>{nameToOwner[pr.name]=this.getOwners(pr)[0];});
       const mig={};
       Object.entries(d.weeklyLog).forEach(([n,v])=>{
         if(!v||typeof v!=='object')return;
@@ -185,7 +177,7 @@ class Component extends DCLogic {
       p.weeklyLog=mig;
     }
     if(d.members)p.members=d.members;
-    if(d.projects)p.projects=d.projects;
+    if(d.projects){p.projects=d.projects.map(pr=>{if(!pr.statusLog)pr.statusLog=[];return pr;});}
     if(d.ptoLog)p.ptoLog=d.ptoLog;
     if(d.projectComments)p.projectComments=d.projectComments;
     if(Object.keys(p).length)this.setState(p);
@@ -202,9 +194,17 @@ class Component extends DCLogic {
 
   /* ── Data helpers ──────────────────────────────── */
   getMembers(){return this.state.members||this.DEFAULT_MEMBERS;}
+  getOwners(p){return p.owners||[p.owner];}
+  wlogKey(p,member){
+    const owners=this.getOwners(p);
+    if(owners.length>1&&member)return p.name+'|'+member;
+    return p.name+'|'+owners[0];
+  }
   getProjects(){
     const base=this.state.projects||this.DEFAULT_PROJECTS;
     return base.map(p=>{
+      const owners=this.getOwners(p);
+      if(owners.length>1)return p; // multi-owner: no single weeklyLog to apply
       const log=this.state.weeklyLog[this.wlogKey(p)];if(!log)return p;
       const a8=[...p.actual8w],p4=[...p.planned4w];
       this.WEEKS.forEach(w=>{const ov=log[w.id];if(!ov)return;if(w.actualIdx!==null&&ov.actual!=null)a8[w.actualIdx]=ov.actual;if(w.plannedIdx!==null&&ov.planned!=null)p4[w.plannedIdx]=ov.planned;});
@@ -215,14 +215,14 @@ class Component extends DCLogic {
   filtered(){
     let ps=this.getProjects().filter(p=>!['Completed','Archived'].includes(p.status));
     if(this.state.filterType!=='All')ps=ps.filter(p=>p.type===this.state.filterType);
-    if(this.state.filterOwner!=='All')ps=ps.filter(p=>p.owner===this.state.filterOwner);
+    if(this.state.filterOwner!=='All')ps=ps.filter(p=>this.getOwners(p).includes(this.state.filterOwner));
     return ps;
   }
   loadWeekEntries(weekId,member){
     const wk=this.WEEKS.find(w=>w.id===weekId);
     const entries={};
-    this.getProjects().filter(p=>p.owner===member&&!['Completed','Archived'].includes(p.status)).forEach(p=>{
-      const ov=this.state.weeklyLog[this.wlogKey(p)]?.[weekId];
+    this.getProjects().filter(p=>this.getOwners(p).includes(member)&&!['Completed','Archived'].includes(p.status)).forEach(p=>{
+      const ov=this.state.weeklyLog[this.wlogKey(p,member)]?.[weekId];
       const dA=wk&&wk.actualIdx!==null?p.actual8w[wk.actualIdx]:'';
       const dP=wk&&wk.plannedIdx!==null?p.planned4w[wk.plannedIdx]:weekId==='w_jun26'?p.planned4w[3]:'';
       entries[p.name]={planned:ov?.planned!=null?ov.planned:dP,actual:ov?.actual!=null?ov.actual:(dA||'')};
@@ -230,19 +230,27 @@ class Component extends DCLogic {
     return entries;
   }
   estTotal(phases){return phases.reduce((s,ph)=>s+ph.hpw*(ph.endMonth-ph.startMonth+1)*4.33,0);}
-  actTotal(p){return p.actual8w.reduce((s,v)=>s+v,0)+Object.values(this.state.weeklyLog[this.wlogKey(p)]||{}).reduce((s,w)=>s+(w?.actual||0),0);}
+  actTotal(p){
+    const base=p.actual8w.reduce((s,v)=>s+v,0);
+    const owners=this.getOwners(p);
+    if(owners.length>1){
+      return base*owners.length;
+    }
+    return base+Object.values(this.state.weeklyLog[this.wlogKey(p)]||{}).reduce((s,w)=>s+(w?.actual||0),0);
+  }
   getOwnerWeekData(owner,weekId){
     const w=this.WEEKS.find(x=>x.id===weekId);
     if(!w)return{actual:0,planned:0};
-    const ps=this.getProjects().filter(p=>p.owner===owner&&!['Completed','Archived'].includes(p.status));
+    const ps=this.getProjects().filter(p=>this.getOwners(p).includes(owner)&&!['Completed','Archived'].includes(p.status));
     let actual=0,planned=0;
     ps.forEach(p=>{
-      if(w.current){actual+=this.state.weeklyLog[this.wlogKey(p)]?.[weekId]?.actual||0;planned+=p.planned4w[3]||0;}
+      const owners=this.getOwners(p);
+      const logKey=owners.length>1?p.name+'|'+owner:this.wlogKey(p);
+      if(w.current){actual+=this.state.weeklyLog[logKey]?.['w_jun26']?.actual||(owners.length>1?p.actual8w[0]||0:0);planned+=p.planned4w[3]||0;}
       else{if(w.actualIdx!==null)actual+=p.actual8w[w.actualIdx]||0;if(w.plannedIdx!==null)planned+=p.planned4w[w.plannedIdx]||0;}
     });
     return{actual,planned};
   }
-  wlogKey(p){return p.name+'|'+p.owner;}
   getMemberPTO(m,wid){return this.state.ptoLog[m]?.[wid]||0;}
   getBlockers(pname){return(this.state.projectComments[pname]||[]).filter(c=>c.isBlocker&&!c.resolved);}
   e(t,p,...c){return React.createElement(t,p,...c);}
@@ -342,7 +350,7 @@ class Component extends DCLogic {
     const tAct=own4.reduce((s,o)=>s+this.getOwnerWeekData(o,dashWeek).actual,0);
     const tPlan=own4.reduce((s,o)=>s+this.getOwnerWeekData(o,dashWeek).planned,0);
     const util=tPlan>0?Math.round(tAct/tPlan*100):0;
-    const behind=ps.filter(p=>{const{actual,planned}=this.getOwnerWeekData(p.owner,dashWeek);return planned>0&&actual<planned*0.8&&ps.find(x=>x.name===p.name);}).length;
+    const behind=ps.filter(p=>{const{actual,planned}=this.getOwnerWeekData(this.getOwners(p)[0],dashWeek);return planned>0&&actual<planned*0.8;}).length;
     const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:Math.round(tAct*10)/10,suf:'h',l:'Hours logged',n:selW.short+' (team)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · '+selW.short,c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
     return e('div',{style:{display:'flex',flexWrap:'wrap'}},
       ...kpis.map((k,i)=>e('div',{key:k.l,style:{flex:'1 1 140px',padding:'20px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
@@ -414,8 +422,11 @@ class Component extends DCLogic {
   }
 
   sparkline(p){
-    const w26ac=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
-    const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:w26ac,fc:w26ac===0}];
+    const owners=this.getOwners(p);
+    const w26ac=owners.length>1
+      ?owners.reduce((s,mbr)=>s+(this.state.weeklyLog[p.name+'|'+mbr]?.['w_jun26']?.actual||0),0)||owners.length*(p.actual8w[0]||0)
+      :(this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0);
+    const G=[{pl:p.planned4w[0]*(owners.length>1?owners.length:1),ac:p.actual8w[5]*(owners.length>1?owners.length:1)},{pl:p.planned4w[1]*(owners.length>1?owners.length:1),ac:p.actual8w[6]*(owners.length>1?owners.length:1)},{pl:p.planned4w[2]*(owners.length>1?owners.length:1),ac:p.actual8w[7]*(owners.length>1?owners.length:1)},{pl:p.planned4w[3]*(owners.length>1?owners.length:1),ac:w26ac,fc:w26ac===0}];
     const mx=Math.max(1,...G.map(g=>Math.max(g.pl,g.ac)));
     const W=72,H=22,bW=16,gap=2;
     const rects=G.flatMap((g,i)=>{
@@ -443,7 +454,7 @@ class Component extends DCLogic {
             blockers.length>0&&e('div',{style:{width:7,height:7,borderRadius:'50%',background:this.RED,flexShrink:0,marginLeft:2}})
           )
         ),
-        e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+        e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
         e('td',{style:{padding:'11px 10px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
         e('td',{style:{padding:'11px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},pl>0?pl+'h':'—'),
         e('td',{style:{padding:'11px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},ac>0?ac+'h':'—'),
@@ -506,7 +517,7 @@ class Component extends DCLogic {
 
     // Stats
     const tot=p.actual8w.reduce((s,v)=>s+v,0);
-    const statsData=[['Type',p.type,this.TC[p.type]],['Owner',p.owner,null],['Phase',p.currentPhase,this.PC[p.currentPhase]],['8-wk total',tot+'h',null],['Estimated',p.phases?'~'+Math.round(this.estTotal(p.phases))+'h':'—',null],['Forecast W0',p.planned4w[3]>0?p.planned4w[3]+'h':'—',null]];
+    const statsData=[['Type',p.type,this.TC[p.type]],['Owner',this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', '),null],['Phase',p.currentPhase,this.PC[p.currentPhase]],['8-wk total',tot+'h',null],['Estimated',p.phases?'~'+Math.round(this.estTotal(p.phases))+'h':'—',null],['Forecast W0',p.planned4w[3]>0?p.planned4w[3]+'h':'—',null]];
     const statsGrid=e('div',{style:{flexShrink:0,minWidth:150,display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px 16px',alignContent:'start'}},
       ...statsData.map(([l,v,c])=>e('div',{key:l},
         e('div',{style:{fontSize:9,color:'#bbc4cf',textTransform:'uppercase',letterSpacing:'0.07em',fontWeight:600,marginBottom:2}},l),
@@ -523,7 +534,28 @@ class Component extends DCLogic {
         ),
         statsGrid
       ),
+      this.buildStatusHistory(p),
       this.buildComments(p)
+    );
+  }
+
+  buildStatusHistory(p){
+    const{e}=this;
+    const log=(p.statusLog||[]).slice(-5).reverse();
+    return e('div',{style:{padding:'12px 20px',borderTop:'1px solid #f0f4f8'}},
+      e('div',{style:{fontSize:11,fontWeight:600,color:this.NAVY,textTransform:'uppercase',letterSpacing:'0.07em',marginBottom:8}},'Status History'),
+      log.length===0
+        ?e('div',{style:{fontSize:12,color:this.GRAY}},'No status changes recorded.')
+        :e('div',{style:{display:'flex',flexDirection:'column',gap:5}},
+            ...log.map((s,i)=>{
+              const c=this.PC[s.status]||this.GRAY;
+              return e('div',{key:i,style:{display:'flex',alignItems:'center',gap:8}},
+                e('span',{style:{fontSize:11,color:'#bbc4cf',minWidth:90,flexShrink:0}},s.date),
+                e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:c,background:c+'18'}},s.status),
+                s.author&&e('span',{style:{fontSize:11,color:this.GRAY}},s.author)
+              );
+            })
+          )
     );
   }
 
@@ -591,6 +623,22 @@ class Component extends DCLogic {
   }
 
   getProjectWeekData(p,w){
+    const owners=this.getOwners(p);
+    if(owners.length>1){
+      let actual=0,planned=0;
+      owners.forEach(mbr=>{
+        const log=this.state.weeklyLog[p.name+'|'+mbr];
+        if(w.current){
+          actual+=log?.['w_jun26']?.actual??p.actual8w[0]??0;
+          planned+=log?.['w_jun26']?.planned??p.planned4w[3]??0;
+        } else {
+          actual+=(w.actualIdx!==null?(log?.[w.id]?.actual??p.actual8w[w.actualIdx]??0):0);
+          planned+=(w.plannedIdx!==null?(log?.[w.id]?.planned??p.planned4w[w.plannedIdx]??0):(w.isFuture&&w.forecastIdx!==null?p.forecast[w.forecastIdx]||0:0));
+        }
+      });
+      const phase=p.phases?p.phases.find(ph=>w.month>=ph.startMonth&&w.month<=ph.endMonth):null;
+      return{actual:actual||null,planned:planned||null,phase,isFuture:w.isFuture};
+    }
     let actual=null,planned=null;
     if(w.actualIdx!==null&&w.actualIdx!==undefined){const r=p.actual8w[w.actualIdx];actual=r>0?r:null;}
     if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
@@ -600,6 +648,23 @@ class Component extends DCLogic {
     return{actual,planned,phase,isFuture:w.isFuture};
   }
   getProjectMonthData(p,m){
+    const owners=this.getOwners(p);
+    if(owners.length>1){
+      const mult=owners.length;
+      let actual=0,planned=0;
+      if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0)*mult;
+      else if(m.month===5){
+        actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0)*mult;
+        const w26sum=owners.reduce((s,mbr)=>s+(this.state.weeklyLog[p.name+'|'+mbr]?.['w_jun26']?.actual||0),0);
+        actual+=w26sum||0;
+        planned=p.planned4w.reduce((s,v)=>s+v,0)*mult;
+      }
+      else if(m.month===6)planned=(p.forecast[0]||0)*4*mult;
+      else if(m.month===7)planned=(p.forecast[1]||0)*4*mult;
+      else if(m.month===8)planned=(p.forecast[2]||0)*4*mult;
+      const phase=p.phases?p.phases.find(ph=>m.month>=ph.startMonth&&m.month<=ph.endMonth):null;
+      return{actual,planned,phase,isFuture:m.isFuture};
+    }
     let actual=0,planned=0;
     if(m.month===4)actual=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
     else if(m.month===5){actual=p.actual8w.slice(5).reduce((s,v)=>s+v,0);const w0=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(w0?.actual!=null)actual+=w0.actual;planned=p.planned4w.reduce((s,v)=>s+v,0);}
@@ -714,13 +779,15 @@ class Component extends DCLogic {
     const{e}=this,ps=this.filtered();
     const rows=ps.map(p=>{
       const mayAct=p.actual8w.slice(0,5).reduce((s,v)=>s+v,0);
-      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)+(this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0);
+      const owners=this.getOwners(p);
+      const w26add=owners.length>1?owners.reduce((s,m)=>s+(this.state.weeklyLog[p.name+'|'+m]?.['w_jun26']?.actual||0),0):this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
+      const junAct=p.actual8w.slice(5).reduce((s,v)=>s+v,0)*(owners.length>1?owners.length:1)+w26add;
       const junPlan=p.planned4w.reduce((s,v)=>s+v,0);
       const pct=junPlan>0?Math.round(junAct/junPlan*100):null;
       const tc=this.TC[p.type]||this.BLUE;
       return e('tr',{key:p.name,style:{borderBottom:'1px solid #e4e9ef'}},
         e('td',{style:{padding:'10px 10px'}},e('div',{style:{display:'flex',alignItems:'center',gap:7}},e('div',{style:{width:3,height:14,borderRadius:2,background:tc,flexShrink:0}}),e('span',{style:{fontSize:12,fontWeight:500,color:this.NAVY}},p.name))),
-        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+        e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,whiteSpace:'nowrap'}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
         e('td',{style:{padding:'10px 10px',fontSize:12,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},mayAct>0?mayAct+'h':'—'),
         e('td',{style:{padding:'10px 10px',fontSize:12,fontWeight:600,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junAct>0?junAct+'h':'—'),
         e('td',{style:{padding:'10px 10px',fontSize:12,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},junPlan>0?junPlan+'h':'—'),
@@ -735,7 +802,11 @@ class Component extends DCLogic {
       );
     });
     const totMay=ps.reduce((s,p)=>s+p.actual8w.slice(0,5).reduce((a,v)=>a+v,0),0);
-    const totJA=ps.reduce((s,p)=>s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)+(this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0),0);
+    const totJA=ps.reduce((s,p)=>{
+      const ow=this.getOwners(p);
+      const w26add=ow.length>1?ow.reduce((a,m)=>a+(this.state.weeklyLog[p.name+'|'+m]?.['w_jun26']?.actual||0),0):this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26']?.actual||0;
+      return s+p.actual8w.slice(5).reduce((a,v)=>a+v,0)*(ow.length>1?ow.length:1)+w26add;
+    },0);
     const totJP=ps.reduce((s,p)=>s+p.planned4w.reduce((a,v)=>a+v,0),0);
     return e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflowX:'auto'}},
       e('table',{style:{width:'100%',minWidth:520,borderCollapse:'collapse'}},
@@ -767,7 +838,7 @@ class Component extends DCLogic {
             e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:8}},'Manage'),
             e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:0,letterSpacing:'-0.02em'}},'Projects')
           ),
-          e('button',{onClick:()=>this.setState({showProjectModal:true,editProjectId:null,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[{id:Date.now(),name:'Implementation',startMonth:5,endMonth:8,hpw:4}]}}),style:{padding:'10px 22px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ New project')
+          e('button',{onClick:()=>this.setState({showProjectModal:true,editProjectId:null,projectForm:{name:'',owners:['Sweta'],type:'Transform',status:'Implementation',phases:[{id:Date.now(),name:'Implementation',startMonth:5,endMonth:8,hpw:4}]}}),style:{padding:'10px 22px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ New project')
         )
       ),
       e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef',padding:'0 32px'}},
@@ -804,12 +875,12 @@ class Component extends DCLogic {
                         )
                       )
                     ),
-                    e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,whiteSpace:'nowrap'}},p.owner),
+                    e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,whiteSpace:'nowrap'}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
                     e('td',{style:{padding:'13px 12px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'3px 8px',borderRadius:4,color:phc,background:phc+'15'}},p.currentPhase)),
                     e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},est>0?'~'+est+'h':'—'),
                     e('td',{style:{padding:'13px 12px',fontSize:13,fontWeight:500,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},act>0?act+'h':'—'),
                     e('td',{style:{padding:'13px 12px'}},prog!==null&&e('div',{style:{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}},e('div',{style:{width:56,height:6,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},e('div',{style:{height:'100%',width:Math.min(prog,100)+'%',background:prog>=80?this.GREEN:prog>=50?this.AMBER:this.RED,borderRadius:3}})),e('span',{style:{fontSize:11,color:this.GRAY,minWidth:32,textAlign:'right',fontVariantNumeric:'tabular-nums'}},prog+'%'))),
-                    e('td',{style:{padding:'13px 12px'}},e('select',{value:p.status,onChange:ev=>{const ps2=this.getProjects().map(x=>x.name===p.name?{...x,status:ev.target.value,currentPhase:ev.target.value}:x);this.persist({projects:ps2});},style:{padding:'5px 8px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,color:this.NAVY,fontFamily:'inherit',cursor:'pointer'}},
+                    e('td',{style:{padding:'13px 12px'}},e('select',{value:p.status,onChange:ev=>{const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});const newStatusLog=[...(p.statusLog||[]),{status:ev.target.value,author:'Team',date:today}];const ps2=this.getProjects().map(x=>x.name===p.name?{...x,status:ev.target.value,currentPhase:ev.target.value,statusLog:newStatusLog}:x);this.persist({projects:ps2});},style:{padding:'5px 8px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,color:this.NAVY,fontFamily:'inherit',cursor:'pointer'}},
                       ...['Implementation','Assessment','Testing','Go-live','Support','On Hold','Completed','Archived'].map(s=>e('option',{key:s,value:s},s))
                     )),
                     e('td',{style:{padding:'13px 12px'}},e('button',{onClick:()=>this.openEdit(p),style:{padding:'5px 10px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,cursor:'pointer',color:this.NAVY,fontFamily:'inherit'}},'Edit'))
@@ -821,7 +892,7 @@ class Component extends DCLogic {
     );
   }
 
-  openEdit(p){this.setState({showProjectModal:true,editProjectId:p.name,projectForm:{name:p.name,owner:p.owner,type:p.type,status:p.status,phases:(p.phases||[]).map(ph=>({...ph}))}});}
+  openEdit(p){this.setState({showProjectModal:true,editProjectId:p.name,projectForm:{name:p.name,owners:this.getOwners(p),type:p.type,status:p.status,phases:(p.phases||[]).map(ph=>({...ph}))}});}
 
   buildProjectModal(){
     if(!this.state.showProjectModal)return null;
@@ -849,14 +920,28 @@ class Component extends DCLogic {
       e('div',{style:{background:'#fff',borderRadius:12,width:'100%',maxWidth:640,boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}},
         e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 24px',borderBottom:'1px solid #e4e9ef'}},
           e('h2',{style:{margin:0,fontSize:16,fontWeight:600,color:this.NAVY}},isEdit?'Edit project':'New project'),
-          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]}}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',fontFamily:'inherit'}},'×')
+          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owners:['Sweta'],type:'Transform',status:'Implementation',phases:[]}}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',fontFamily:'inherit'}},'×')
         ),
         e('div',{style:{padding:'24px',maxHeight:'68vh',overflowY:'auto'}},
           e('div',{style:{marginBottom:24}},
             e('div',{style:{fontSize:11,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:12}},'Project details'),
             e('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}},
               e('div',{style:{gridColumn:'1/-1'}},e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Name'),e('input',{type:'text',placeholder:'e.g. AP Advance Matching',value:projectForm.name,onChange:ev=>set({name:ev.target.value}),style:iS,disabled:isEdit})),
-              e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Owner'),e('select',{value:projectForm.owner,onChange:ev=>set({owner:ev.target.value}),style:iS},...this.getMembers().map(m=>e('option',{key:m,value:m},m)))),
+              e('div',null,
+                e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Owners'),
+                e('div',{style:{display:'flex',flexWrap:'wrap',gap:6,padding:'8px 0'}},
+                  ...this.getMembers().map(m=>{
+                    const checked=(projectForm.owners||[]).includes(m);
+                    return e('label',{key:m,style:{display:'flex',alignItems:'center',gap:4,fontSize:12,color:checked?this.BLUE:this.GRAY,cursor:'pointer',userSelect:'none',padding:'4px 8px',borderRadius:6,border:'1px solid '+(checked?this.BLUE:'#dde4eb'),background:checked?this.BLUE+'10':'#fff'}},
+                      e('input',{type:'checkbox',checked,onChange:ev=>{
+                        const cur=projectForm.owners||[];
+                        set({owners:ev.target.checked?[...cur,m]:cur.filter(x=>x!==m)});
+                      },style:{accentColor:this.BLUE}}),
+                      m
+                    );
+                  })
+                )
+              ),
               e('div',null,e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Type'),e('select',{value:projectForm.type,onChange:ev=>set({type:ev.target.value}),style:iS},...['Transform','Grow','Run','Agent'].map(t=>e('option',{key:t,value:t},t)))),
               e('div',{style:{gridColumn:'1/-1'}},e('div',{style:{fontSize:10,color:this.GRAY,fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase',marginBottom:4}},'Status'),e('select',{value:projectForm.status,onChange:ev=>set({status:ev.target.value}),style:iS},...['Implementation','Assessment','Testing','Go-live','Support','On Hold','Completed','Archived'].map(s=>e('option',{key:s,value:s},s))))
             )
@@ -875,11 +960,11 @@ class Component extends DCLogic {
           )
         ),
         e('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,padding:'18px 24px',borderTop:'1px solid #e4e9ef'}},
-          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
+          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owners:['Sweta'],type:'Transform',status:'Implementation',phases:[]}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
           e('button',{onClick:()=>{
             if(!projectForm.name.trim())return;
-            if(isEdit){this.persist({projects:this.getProjects().map(p=>p.name===editProjectId?{...p,owner:projectForm.owner,type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases}:p),showProjectModal:false});}
-            else{this.persist({projects:[...this.getProjects(),{name:projectForm.name.trim(),owner:projectForm.owner,type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases,actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0]}],showProjectModal:false});}
+            if(isEdit){this.persist({projects:this.getProjects().map(p=>p.name===editProjectId?{...p,owners:projectForm.owners||[],type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases}:p),showProjectModal:false});}
+            else{this.persist({projects:[...this.getProjects(),{name:projectForm.name.trim(),owners:projectForm.owners||['Sweta'],type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases,actual8w:[0,0,0,0,0,0,0,0],planned4w:[0,0,0,0],forecast:[0,0,0],statusLog:[]}],showProjectModal:false});}
           },style:{padding:'8px 22px',border:'none',borderRadius:8,background:this.BLUE,color:'#fff',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},isEdit?'Save changes':'Add project')
         )
       )
@@ -890,7 +975,7 @@ class Component extends DCLogic {
   buildLogView(){
     const{e}=this,{logMember,logWeek,logEntries,logSaved}=this.state;
     const iS={width:80,padding:'7px 10px',border:'1px solid #dde4eb',borderRadius:7,fontSize:13,textAlign:'right',fontFamily:'inherit',background:'#fff',color:this.NAVY};
-    const ps=this.getProjects().filter(p=>p.owner===logMember&&!['Completed','Archived'].includes(p.status));
+    const ps=this.getProjects().filter(p=>this.getOwners(p).includes(logMember)&&!['Completed','Archived'].includes(p.status));
     const selWk=this.WEEKS.find(w=>w.id===logWeek);
     const ptoVal=this.state.ptoLog[logMember]?.[logWeek]||'';
     return e('div',null,
@@ -987,7 +1072,7 @@ class Component extends DCLogic {
             e('button',{onClick:()=>this.setState({logEntries:{}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Clear'),
             e('button',{onClick:()=>{
               const nl={...this.state.weeklyLog};
-              ps.forEach(p=>{const v=logEntries[p.name]||{};if(v.planned!==''||v.actual!==''){const k=this.wlogKey(p);if(!nl[k])nl[k]={};nl[k][logWeek]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};}});
+              ps.forEach(p=>{const v=logEntries[p.name]||{};if(v.planned!==''||v.actual!==''){const k=this.wlogKey(p,logMember);if(!nl[k])nl[k]={};nl[k][logWeek]={planned:v.planned!==''?Number(v.planned):null,actual:v.actual!==''?Number(v.actual):null};}});
               // Save PTO to persistent store too
               this.persist({weeklyLog:nl,ptoLog:this.state.ptoLog});
               this.setState({logSaved:true});
@@ -1039,7 +1124,7 @@ class Component extends DCLogic {
               ...['Member','Active projects','Capacity','PTO this week',''].map(h=>e('th',{key:h,style:{padding:'10px 16px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.07em',textTransform:'uppercase',textAlign:h===''?'right':'left'}},h))
             )),
             e('tbody',null,...members.map(m=>{
-              const active=this.getProjects().filter(p=>p.owner===m&&!['Completed','Archived'].includes(p.status)).length;
+              const active=this.getProjects().filter(p=>this.getOwners(p).includes(m)&&!['Completed','Archived'].includes(p.status)).length;
               const cap=(this.OWNER_TOTALS[m]?.planned||[40])[0];
               const pto=this.getMemberPTO(m,'w_jun26');
               return e('tr',{key:m,style:{borderBottom:'1px solid #f0f4f8'}},
@@ -1072,11 +1157,21 @@ class Component extends DCLogic {
     const{e}=this,{filterOwner,filterType}=this.state;
     const WEEKS_FULL=this.ALL_WEEKS;
     let ps=this.getProjects().filter(p=>p.status!=='Archived');
-    if(filterOwner!=='All')ps=ps.filter(p=>p.owner===filterOwner);
+    if(filterOwner!=='All')ps=ps.filter(p=>this.getOwners(p).includes(filterOwner));
     if(filterType!=='All')ps=ps.filter(p=>p.type===filterType);
     const COL=84,LABEL=190;
 
     const getVal=(p,w)=>{
+      const owners=this.getOwners(p);
+      if(owners.length>1){
+        let actual=0,planned=0;
+        owners.forEach(mbr=>{
+          const log=this.state.weeklyLog[p.name+'|'+mbr];
+          if(w.current){actual+=log?.['w_jun26']?.actual??p.actual8w[0]??0;planned+=log?.['w_jun26']?.planned??p.planned4w[3]??0;}
+          else{actual+=(w.actualIdx!==null?(log?.[w.id]?.actual??p.actual8w[w.actualIdx]??0):0);planned+=(w.plannedIdx!==null?(log?.[w.id]?.planned??p.planned4w[w.plannedIdx]??0):(w.isFuture&&w.forecastIdx!==null?p.forecast[w.forecastIdx]||0:0));}
+        });
+        return{actual:actual||null,planned:planned||null};
+      }
       let actual=null,planned=null;
       if(w.actualIdx!==null&&w.actualIdx!==undefined){const v=p.actual8w[w.actualIdx];actual=v>0?v:null;}
       if(w.current){const log=this.state.weeklyLog[this.wlogKey(p)]?.['w_jun26'];if(log?.actual!=null)actual=log.actual;planned=log?.planned!=null?log.planned:p.planned4w[3];}
@@ -1120,7 +1215,7 @@ class Component extends DCLogic {
             e('div',null,
               e('div',{style:{fontSize:12,fontWeight:500,color:this.NAVY,lineHeight:1.3,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',maxWidth:160}},p.name),
               e('div',{style:{display:'flex',alignItems:'center',gap:4,marginTop:2}},
-                e('span',{style:{fontSize:9,color:this.GRAY}},p.owner),
+                e('span',{style:{fontSize:9,color:this.GRAY}},this.getOwners(p).slice(0,2).join(', ')+(this.getOwners(p).length>2?'…':'')),
                 p.currentPhase&&e('span',{style:{fontSize:9,color:phc,background:phc+'18',padding:'0 4px',borderRadius:2}},p.currentPhase)
               )
             )
@@ -1224,7 +1319,7 @@ class Component extends DCLogic {
       const effCap=Math.max(CAPACITY-pto,0);
       const pct=Math.round(actual/CAPACITY*100);
       const bc=pct>=90?this.GREEN:pct>=70?this.BLUE:pct>=50?this.AMBER:actual>0?this.RED:'#c4cdd6';
-      const mProjs=projData.filter(p=>p.owner===m);
+      const mProjs=projData.filter(p=>this.getOwners(p).includes(m));
       return{m,actual,planned:CAPACITY,pto,effCap,pct,bc,mProjs};
     });
 
@@ -1295,7 +1390,7 @@ class Component extends DCLogic {
             e('span',{style:{fontSize:13,fontWeight:500,color:this.NAVY}},p.name)
           )
         ),
-        e('td',{style:{padding:'10px 12px',fontSize:12,color:this.GRAY}},p.owner),
+        e('td',{style:{padding:'10px 12px',fontSize:12,color:this.GRAY}},this.getOwners(p).length>2?this.getOwners(p).slice(0,2).join(', ')+'…':this.getOwners(p).join(', ')),
         e('td',{style:{padding:'10px 12px'}},p.currentPhase&&e('span',{style:{fontSize:11,fontWeight:500,padding:'2px 7px',borderRadius:4,color:phc,background:phc+'18'}},p.currentPhase)),
         e('td',{style:{padding:'10px 12px',textAlign:'right',fontSize:12,color:this.GRAY,fontVariantNumeric:'tabular-nums'}},p.wkPlanned>0?p.wkPlanned+'h':'—'),
         e('td',{style:{padding:'10px 12px',textAlign:'right',fontSize:13,fontWeight:600,color:p.wkActual>0?this.NAVY:'#bbc4cf',fontVariantNumeric:'tabular-nums'}},p.wkActual>0?p.wkActual+'h':'—'),

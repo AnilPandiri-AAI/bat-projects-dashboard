@@ -103,11 +103,18 @@ class Component extends DCLogic {
     ptoLog:{},projectComments:{},commentForm:{author:'Sweta',text:'',isBlocker:false},
     newMember:{name:'',capacity:40},
     weeklyLog:{},members:null,projects:null,weeklyViewWeek:_CAL.currentWeekId,
+    deliverableForm:{title:'',assignee:'Sweta',status:'To Do',priority:'Medium'},
+    backlogFilter:{status:'All',owner:'All',project:'All'},
   };
 
   NAVY='#1b2d44';BLUE='#4778a8';GREEN='#2ea86a';AMBER='#d98f28';RED='#c73a3a';GRAY='#9aaabb';
   TC={Transform:'#4778a8',Grow:'#2ea86a',Run:'#d98f28',Agent:'#7055c0'};
   PC={'Analysis':'#7055c0','Implementation':'#4778a8','Testing':'#d98f28','Go-live':'#2ea86a','Support':'#6b7d94','Assessment':'#9aaabb','RFP':'#c73a3a'};
+  // Deliverable status & priority colours
+  DS={'To Do':'#9aaabb','In Progress':'#4778a8','Done':'#2ea86a','Blocked':'#c73a3a'};
+  DP={High:'#c73a3a',Medium:'#d98f28',Low:'#9aaabb'};
+  D_STATUSES=['To Do','In Progress','Done','Blocked'];
+  D_PRIORITIES=['High','Medium','Low'];
 
   WEEKS=_CAL.weeks;
   ALL_WEEKS=_CAL.allWeeks;
@@ -316,17 +323,38 @@ class Component extends DCLogic {
     this.persist({projectComments:u});
   }
 
+  /* ── Deliverable actions ────────────────────────── */
+  addDeliverable(pname){
+    const f=this.state.deliverableForm;
+    if(!f.title.trim())return;
+    const d={id:Date.now(),title:f.title.trim(),assignee:f.assignee,status:f.status,priority:f.priority};
+    const ps=this.getProjects().map(p=>p.name===pname?{...p,deliverables:[...(p.deliverables||[]),d]}:p);
+    this.persist({projects:ps,deliverableForm:{...this.state.deliverableForm,title:''}});
+  }
+  updateDeliverable(pname,id,patch){
+    const ps=this.getProjects().map(p=>p.name!==pname?p:{...p,deliverables:(p.deliverables||[]).map(d=>d.id===id?{...d,...patch}:d)});
+    this.persist({projects:ps});
+  }
+  deleteDeliverable(pname,id){
+    const ps=this.getProjects().map(p=>p.name!==pname?p:{...p,deliverables:(p.deliverables||[]).filter(d=>d.id!==id)});
+    this.persist({projects:ps});
+  }
+
   /* ── Icons ─────────────────────────────────────── */
   iconGrid(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'currentColor'},React.createElement('rect',{x:0,y:0,width:7,height:7,rx:1}),React.createElement('rect',{x:9,y:0,width:7,height:7,rx:1}),React.createElement('rect',{x:0,y:9,width:7,height:7,rx:1}),React.createElement('rect',{x:9,y:9,width:7,height:7,rx:1}));}
   iconFolder(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('path',{d:'M1 5a1 1 0 011-1h4l1.5 2H14a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V5z'}));}
   iconClock(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:8,cy:8,r:6.5}),React.createElement('path',{d:'M8 4.5V8l2.5 1.5'}));}
   iconTeam(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('circle',{cx:6,cy:5,r:2.5}),React.createElement('path',{d:'M1 14c0-2.76 2.24-5 5-5s5 2.24 5 5'}),React.createElement('circle',{cx:12.5,cy:5.5,r:2}),React.createElement('path',{d:'M15 14c0-2.21-1.79-4-4-4'}));}
   iconTimeline(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},React.createElement('rect',{x:1,y:3,width:14,height:10,rx:1}),React.createElement('path',{d:'M1 6h14'}),React.createElement('path',{d:'M5 6v7'}),React.createElement('path',{d:'M10 6v7'}));}
+  iconBacklog(){return React.createElement('svg',{width:16,height:16,viewBox:'0 0 16 16',fill:'none',stroke:'currentColor',strokeWidth:1.5,strokeLinecap:'round'},
+    React.createElement('path',{d:'M2 4h12'}),React.createElement('path',{d:'M2 8h9'}),React.createElement('path',{d:'M2 12h7'}),
+    React.createElement('circle',{cx:13,cy:11,r:2.5}),React.createElement('path',{d:'M12 11l.7.7 1.3-1.3'})
+  );}
 
   /* ── Nav ───────────────────────────────────────── */
   buildNav(){
     const{e}=this,{view}=this.state;
-    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['log','Log Hours',this.iconClock()],['timeline','Timeline',this.iconTimeline()],['weekly','Weekly',this.iconCalendar()],['team','Team',this.iconTeam()]];
+    const items=[['dashboard','Dashboard',this.iconGrid()],['projects','Projects',this.iconFolder()],['backlog','Backlog',this.iconBacklog()],['log','Log Hours',this.iconClock()],['timeline','Timeline',this.iconTimeline()],['weekly','Weekly',this.iconCalendar()],['team','Team',this.iconTeam()]];
     return e('nav',{style:{width:220,flexShrink:0,background:this.NAVY,display:'flex',flexDirection:'column',height:'100vh'}},
       e('div',{style:{padding:'18px 16px 14px',display:'flex',alignItems:'center',gap:10,borderBottom:'1px solid rgba(255,255,255,0.08)'}},
         e('div',{style:{width:32,height:32,background:'linear-gradient(135deg,#e85d28,#c00020)',borderRadius:7,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
@@ -667,8 +695,80 @@ class Component extends DCLogic {
         ),
         statsGrid
       ),
+      this.buildDeliverables(p),
       this.buildStatusHistory(p),
       this.buildComments(p)
+    );
+  }
+
+  buildDeliverables(p){
+    const{e}=this,{deliverableForm}=this.state;
+    const items=p.deliverables||[];
+    const done=items.filter(d=>d.status==='Done').length;
+    const iS={padding:'6px 10px',border:'1px solid #dde4eb',borderRadius:6,fontSize:12,fontFamily:'inherit',color:this.NAVY,background:'#fff'};
+    const avatarColors=[this.BLUE,'#7055c0',this.GREEN,this.AMBER,'#c73a3a'];
+
+    const list=items.length>0?e('div',{style:{display:'flex',flexDirection:'column',gap:4,marginBottom:12}},
+      ...items.map(d=>{
+        const sc=this.DS[d.status]||this.GRAY;
+        const pc=this.DP[d.priority]||this.GRAY;
+        const mIdx=this.getMembers().indexOf(d.assignee);
+        const ac=avatarColors[Math.max(mIdx,0)%avatarColors.length];
+        return e('div',{key:d.id,style:{display:'flex',alignItems:'center',gap:8,padding:'7px 10px',background:'#fff',borderRadius:8,border:'1px solid #e4e9ef'}},
+          // Priority dot
+          e('div',{title:d.priority,style:{width:6,height:6,borderRadius:'50%',background:pc,flexShrink:0}}),
+          // Title
+          e('span',{style:{flex:1,fontSize:12,color:d.status==='Done'?'#9aaabb':this.NAVY,textDecoration:d.status==='Done'?'line-through':'none',lineHeight:1.3}},d.title),
+          // Assignee avatar
+          e('div',{title:d.assignee,style:{width:20,height:20,borderRadius:'50%',background:ac+'22',border:'1.5px solid '+ac+'44',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+            e('span',{style:{fontSize:8,fontWeight:700,color:ac}},d.assignee[0])
+          ),
+          // Status pill (click cycles through statuses)
+          e('button',{
+            onClick:ev=>{ev.stopPropagation();const i=this.D_STATUSES.indexOf(d.status);this.updateDeliverable(p.name,d.id,{status:this.D_STATUSES[(i+1)%this.D_STATUSES.length]});},
+            style:{padding:'2px 8px',border:'1px solid '+sc+'44',borderRadius:9999,background:sc+'15',color:sc,fontSize:10,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}
+          },d.status),
+          // Delete
+          e('button',{onClick:ev=>{ev.stopPropagation();this.deleteDeliverable(p.name,d.id);},style:{width:18,height:18,border:'none',borderRadius:4,background:'transparent',color:'#c4cdd6',fontSize:13,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontFamily:'inherit',lineHeight:1,padding:0,flexShrink:0}},'×')
+        );
+      })
+    ):e('div',{style:{fontSize:12,color:'#bbc4cf',textAlign:'center',padding:'12px 0',marginBottom:12}},'No deliverables yet. Add one below.');
+
+    // Progress summary
+    const prog=items.length>0?e('div',{style:{display:'flex',alignItems:'center',gap:10,marginBottom:10}},
+      e('div',{style:{flex:1,height:5,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},
+        e('div',{style:{height:'100%',width:(done/items.length*100)+'%',background:this.GREEN,borderRadius:3,transition:'width 0.3s'}})
+      ),
+      e('span',{style:{fontSize:11,color:this.GRAY,whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}},done+'/'+items.length+' done')
+    ):null;
+
+    // Add form
+    const addRow=e('div',{style:{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}},
+      e('input',{type:'text',placeholder:'Add deliverable or user story...',value:deliverableForm.title,
+        onChange:ev=>this.setState({deliverableForm:{...deliverableForm,title:ev.target.value}}),
+        onKeyDown:ev=>{if(ev.key==='Enter'){ev.preventDefault();this.addDeliverable(p.name);}},
+        style:{...iS,flex:'1 1 200px',minWidth:120}}),
+      e('select',{value:deliverableForm.assignee,onChange:ev=>this.setState({deliverableForm:{...deliverableForm,assignee:ev.target.value}}),style:{...iS,width:90}},
+        ...this.getMembers().map(m=>e('option',{key:m,value:m},m))
+      ),
+      e('select',{value:deliverableForm.priority,onChange:ev=>this.setState({deliverableForm:{...deliverableForm,priority:ev.target.value}}),style:{...iS,width:84}},
+        ...this.D_PRIORITIES.map(p=>e('option',{key:p,value:p},p))
+      ),
+      e('select',{value:deliverableForm.status,onChange:ev=>this.setState({deliverableForm:{...deliverableForm,status:ev.target.value}}),style:{...iS,width:106}},
+        ...this.D_STATUSES.map(s=>e('option',{key:s,value:s},s))
+      ),
+      e('button',{onClick:()=>this.addDeliverable(p.name),style:{padding:'6px 14px',border:'none',borderRadius:6,background:this.BLUE,color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer',fontFamily:'inherit'}},'+ Add')
+    );
+
+    return e('div',{style:{padding:'12px 20px 14px',borderTop:'1px solid #f0f4f8'}},
+      e('div',{style:{display:'flex',alignItems:'center',gap:8,marginBottom:10}},
+        e('span',{style:{fontSize:11,fontWeight:600,color:this.NAVY,textTransform:'uppercase',letterSpacing:'0.07em'}},'Deliverables'),
+        items.length>0&&e('span',{style:{fontSize:10,padding:'2px 6px',borderRadius:9999,background:this.GREEN+'18',color:this.GREEN,fontWeight:600}},done+' done'),
+        items.filter(d=>d.status==='Blocked').length>0&&e('span',{style:{fontSize:10,padding:'2px 6px',borderRadius:9999,background:this.RED+'18',color:this.RED,fontWeight:600}},items.filter(d=>d.status==='Blocked').length+' blocked')
+      ),
+      prog,
+      list,
+      addRow
     );
   }
 
@@ -1039,7 +1139,7 @@ class Component extends DCLogic {
           :e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'auto'}},
               e('table',{style:{width:'100%',minWidth:700,borderCollapse:'collapse'}},
                 e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
-                  ...['Project','Owner','Phase','Estimated','Actual','Progress','Status',''].map(h=>e('th',{key:h,style:{padding:'10px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Estimated','Actual','Progress'].includes(h)?'right':'left'}},h))
+                  ...['Project','Owner','Phase','Estimated','Actual','Progress','Deliverables','Status',''].map(h=>e('th',{key:h,style:{padding:'10px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap',textAlign:['Estimated','Actual','Progress'].includes(h)?'right':'left'}},h))
                 )),
                 e('tbody',null,...display.map(p=>{
                   const est=Math.round(this.estTotal(p.phases||[]));
@@ -1047,6 +1147,9 @@ class Component extends DCLogic {
                   const prog=est>0?Math.min(Math.round(act/est*100),200):null;
                   const tc=this.TC[p.type]||this.BLUE,phc=this.PC[p.currentPhase]||this.GRAY;
                   const blocker=this.getBlockers(p.name).length>0;
+                  const dlvs=p.deliverables||[];
+                  const dlvDone=dlvs.filter(d=>d.status==='Done').length;
+                  const dlvBlocked=dlvs.filter(d=>d.status==='Blocked').length;
                   return e('tr',{key:p.name,style:{borderBottom:'1px solid #f0f4f8'}},
                     e('td',{style:{padding:'13px 12px'}},
                       e('div',{style:{display:'flex',alignItems:'center',gap:8}},
@@ -1065,6 +1168,19 @@ class Component extends DCLogic {
                     e('td',{style:{padding:'13px 12px',fontSize:13,color:this.GRAY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},est>0?'~'+est+'h':'—'),
                     e('td',{style:{padding:'13px 12px',fontSize:13,fontWeight:500,color:this.NAVY,textAlign:'right',fontVariantNumeric:'tabular-nums'}},act>0?act+'h':'—'),
                     e('td',{style:{padding:'13px 12px'}},prog!==null&&e('div',{style:{display:'flex',alignItems:'center',gap:8,justifyContent:'flex-end'}},e('div',{style:{width:56,height:6,background:'#e4e9ef',borderRadius:3,overflow:'hidden'}},e('div',{style:{height:'100%',width:Math.min(prog,100)+'%',background:prog>=80?this.GREEN:prog>=50?this.AMBER:this.RED,borderRadius:3}})),e('span',{style:{fontSize:11,color:this.GRAY,minWidth:32,textAlign:'right',fontVariantNumeric:'tabular-nums'}},prog+'%'))),
+                    e('td',{style:{padding:'13px 12px'}},
+                      dlvs.length>0
+                        ?e('div',{style:{display:'flex',flexDirection:'column',gap:4}},
+                            e('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                              e('div',{style:{flex:1,height:4,background:'#e4e9ef',borderRadius:2,overflow:'hidden',minWidth:44}},
+                                e('div',{style:{height:'100%',width:(dlvs.length>0?dlvDone/dlvs.length*100:0)+'%',background:this.GREEN,borderRadius:2}})
+                              ),
+                              e('span',{style:{fontSize:10,color:this.GRAY,whiteSpace:'nowrap',fontVariantNumeric:'tabular-nums'}},dlvDone+'/'+dlvs.length)
+                            ),
+                            dlvBlocked>0&&e('span',{style:{fontSize:9,color:this.RED,fontWeight:600}},dlvBlocked+' blocked')
+                          )
+                        :e('span',{style:{fontSize:11,color:'#dde4eb'}}),'—'
+                    ),
                     e('td',{style:{padding:'13px 12px'}},e('select',{value:p.status,onChange:ev=>{const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});const newStatusLog=[...(p.statusLog||[]),{status:ev.target.value,author:'Team',date:today}];const ps2=this.getProjects().map(x=>x.name===p.name?{...x,status:ev.target.value,currentPhase:ev.target.value,statusLog:newStatusLog}:x);this.persist({projects:ps2});},style:{padding:'5px 8px',border:'1px solid #dde4eb',borderRadius:6,background:'#fff',fontSize:12,color:this.NAVY,fontFamily:'inherit',cursor:'pointer'}},
                       ...['Implementation','Assessment','Testing','Go-live','Support','On Hold','Completed','Archived'].map(s=>e('option',{key:s,value:s},s))
                     )),
@@ -1675,11 +1791,151 @@ class Component extends DCLogic {
     );
   }
 
+  /* ══ BACKLOG ══════════════════════════════════════ */
+  buildBacklogView(){
+    const{e}=this,{backlogFilter}=this.state;
+    const allPs=this.getProjects().filter(p=>!['Archived'].includes(p.status));
+
+    // Gather all deliverables across all projects
+    let allItems=allPs.flatMap(p=>(p.deliverables||[]).map(d=>({...d,projectName:p.name,projectType:p.type})));
+
+    // Apply filters
+    if(backlogFilter.status!=='All')allItems=allItems.filter(d=>d.status===backlogFilter.status);
+    if(backlogFilter.owner!=='All')allItems=allItems.filter(d=>d.assignee===backlogFilter.owner);
+    if(backlogFilter.project!=='All')allItems=allItems.filter(d=>d.projectName===backlogFilter.project);
+
+    // KPI counts
+    const total=allItems.length;
+    const byStatus=this.D_STATUSES.reduce((a,s)=>({...a,[s]:allItems.filter(d=>d.status===s).length}),{});
+    const avatarColors=[this.BLUE,'#7055c0',this.GREEN,this.AMBER,'#c73a3a'];
+
+    const setF=patch=>this.setState({backlogFilter:{...backlogFilter,...patch}});
+
+    // Filter bar
+    const filterBar=e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef',padding:'0 32px'}},
+      e('div',{style:{maxWidth:1100,margin:'0 auto',display:'flex',gap:0,overflowX:'auto'}},
+        // Status tabs
+        ...['All',...this.D_STATUSES].map(s=>{
+          const count=s==='All'?allPs.reduce((c,p)=>(c+(p.deliverables||[]).length),0):allPs.reduce((c,p)=>(c+(p.deliverables||[]).filter(d=>d.status===s).length),0);
+          const active=backlogFilter.status===s;
+          const sc=s==='All'?this.NAVY:(this.DS[s]||this.GRAY);
+          return e('button',{key:s,onClick:()=>setF({status:s}),style:{padding:'12px 16px',border:'none',borderBottom:'2px solid '+(active?sc:'transparent'),background:'transparent',color:active?sc:'#6b7d94',fontSize:13,fontWeight:500,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',marginBottom:-1}},
+            s+' ('+count+')'
+          );
+        })
+      )
+    );
+
+    // Owner filter pills
+    const ownerFilter=e('div',{style:{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}},
+      e('span',{style:{fontSize:10,color:'#bbc4cf',fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Owner'),
+      ...['All',...this.getMembers()].map(o=>e('button',{key:o,onClick:()=>setF({owner:o}),style:{padding:'3px 9px',borderRadius:9999,fontSize:11,fontWeight:500,cursor:'pointer',fontFamily:'inherit',border:'1.5px solid '+(backlogFilter.owner===o?this.BLUE:'#dde4eb'),background:backlogFilter.owner===o?this.BLUE:'#fff',color:backlogFilter.owner===o?'#fff':'#6b7d94'}},o))
+    );
+    const projectFilter=e('div',{style:{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}},
+      e('span',{style:{fontSize:10,color:'#bbc4cf',fontWeight:600,letterSpacing:'0.07em',textTransform:'uppercase'}},'Project'),
+      e('select',{value:backlogFilter.project,onChange:ev=>setF({project:ev.target.value}),style:{padding:'4px 8px',border:'1px solid #dde4eb',borderRadius:6,fontSize:12,fontFamily:'inherit',color:this.NAVY,background:'#fff'}},
+        e('option',{value:'All'},'All projects'),
+        ...allPs.map(p=>e('option',{key:p.name,value:p.name},p.name.length>32?p.name.slice(0,30)+'…':p.name))
+      )
+    );
+
+    // Table rows
+    const rows=allItems.length>0
+      ?allItems.map(d=>{
+          const sc=this.DS[d.status]||this.GRAY;
+          const pc=this.DP[d.priority]||this.GRAY;
+          const tc=this.TC[d.projectType]||this.BLUE;
+          const mIdx=this.getMembers().indexOf(d.assignee);
+          const ac=avatarColors[Math.max(mIdx,0)%avatarColors.length];
+          return e('tr',{key:d.id,style:{borderBottom:'1px solid #f0f4f8'},
+            onMouseEnter:ev=>{ev.currentTarget.style.background='#f6f8fb';},
+            onMouseLeave:ev=>{ev.currentTarget.style.background='';}},
+            // Priority
+            e('td',{style:{padding:'11px 12px',width:8}},
+              e('div',{title:d.priority,style:{width:7,height:7,borderRadius:'50%',background:pc}})
+            ),
+            // Title
+            e('td',{style:{padding:'11px 12px'}},
+              e('div',{style:{fontSize:13,fontWeight:500,color:d.status==='Done'?'#9aaabb':this.NAVY,textDecoration:d.status==='Done'?'line-through':'none'}},d.title)
+            ),
+            // Project
+            e('td',{style:{padding:'11px 12px'}},
+              e('div',{style:{display:'flex',alignItems:'center',gap:5}},
+                e('div',{style:{width:3,height:12,borderRadius:1,background:tc,flexShrink:0}}),
+                e('span',{style:{fontSize:12,color:this.GRAY}},d.projectName.length>28?d.projectName.slice(0,26)+'…':d.projectName)
+              )
+            ),
+            // Assignee
+            e('td',{style:{padding:'11px 12px'}},
+              e('div',{style:{display:'flex',alignItems:'center',gap:6}},
+                e('div',{style:{width:22,height:22,borderRadius:'50%',background:ac+'22',border:'1.5px solid '+ac+'44',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}},
+                  e('span',{style:{fontSize:9,fontWeight:700,color:ac}},d.assignee[0])
+                ),
+                e('span',{style:{fontSize:12,color:this.NAVY}},d.assignee)
+              )
+            ),
+            // Status (click to cycle)
+            e('td',{style:{padding:'11px 12px'}},
+              e('button',{
+                onClick:ev=>{ev.stopPropagation();const i=this.D_STATUSES.indexOf(d.status);this.updateDeliverable(d.projectName,d.id,{status:this.D_STATUSES[(i+1)%this.D_STATUSES.length]});},
+                style:{padding:'3px 10px',border:'1px solid '+sc+'44',borderRadius:9999,background:sc+'15',color:sc,fontSize:11,fontWeight:600,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap'}
+              },d.status)
+            ),
+            // Delete
+            e('td',{style:{padding:'11px 12px',textAlign:'right'}},
+              e('button',{onClick:()=>this.deleteDeliverable(d.projectName,d.id),style:{padding:'3px 8px',border:'1px solid #e4e9ef',borderRadius:5,background:'#fff',color:'#bbc4cf',fontSize:11,cursor:'pointer',fontFamily:'inherit'}},'Remove')
+            )
+          );
+        })
+      :[e('tr',{key:'empty'},e('td',{colSpan:6,style:{padding:'48px',textAlign:'center',color:this.GRAY,fontSize:14}},'No deliverables yet. Add them by clicking any project row in the Dashboard.'))];
+
+    // Summary KPI strip
+    const kpiStrip=e('div',{style:{display:'flex',flexWrap:'wrap',gap:0,borderBottom:'1px solid #e4e9ef',background:'#fff'}},
+      e('div',{style:{flex:'1 1 100px',padding:'16px 24px',borderRight:'1px solid #e4e9ef'}},
+        e('div',{style:{fontSize:28,fontWeight:700,color:this.NAVY,lineHeight:1,fontVariantNumeric:'tabular-nums'}},total),
+        e('div',{style:{fontSize:12,color:this.GRAY,marginTop:4}},'Total deliverables')
+      ),
+      ...this.D_STATUSES.map((s,i)=>{
+        const sc=this.DS[s]||this.GRAY;
+        const cnt=allPs.reduce((c,p)=>(c+(p.deliverables||[]).filter(d=>d.status===s).length),0);
+        return e('div',{key:s,style:{flex:'1 1 100px',padding:'16px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
+          e('div',{style:{fontSize:28,fontWeight:700,color:sc,lineHeight:1,fontVariantNumeric:'tabular-nums'}},cnt),
+          e('div',{style:{fontSize:12,color:this.GRAY,marginTop:4}},s)
+        );
+      })
+    );
+
+    return e('div',null,
+      e('div',{style:{background:this.NAVY,padding:'28px 32px'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto'}},
+          e('div',{style:{fontSize:11,color:'#4778a8',letterSpacing:'0.12em',textTransform:'uppercase',fontWeight:600,marginBottom:10}},'Deliverables'),
+          e('h1',{style:{fontSize:'clamp(22px,3vw,36px)',fontWeight:300,color:'#fff',margin:'0 0 6px',letterSpacing:'-0.02em'}},'Backlog'),
+          e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,lineHeight:1.6,fontWeight:300}},'All user stories and deliverables across every project. Click a status pill to advance it.')
+        )
+      ),
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 32px'}},kpiStrip),
+      filterBar,
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'16px 32px 0'}},
+        e('div',{style:{display:'flex',gap:20,flexWrap:'wrap',marginBottom:16}},ownerFilter,projectFilter)
+      ),
+      e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 32px 32px'}},
+        e('div',{style:{background:'#fff',borderRadius:12,border:'1px solid #e4e9ef',overflow:'auto'}},
+          e('table',{style:{width:'100%',minWidth:600,borderCollapse:'collapse'}},
+            e('thead',null,e('tr',{style:{background:'#f6f8fb',borderBottom:'2px solid #e4e9ef'}},
+              ...['','Title','Project','Assignee','Status',''].map(h=>e('th',{key:h,style:{padding:'9px 12px',fontSize:10,fontWeight:600,color:this.GRAY,letterSpacing:'0.08em',textTransform:'uppercase',whiteSpace:'nowrap'}},h))
+            )),
+            e('tbody',null,...rows)
+          )
+        )
+      )
+    );
+  }
+
   renderVals(){
     const{view}=this.state;
     return{
       nav:this.buildNav(),
-      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='log'?this.buildLogView():view==='timeline'?this.buildTimelineView():view==='weekly'?this.buildWeeklyView():this.buildTeamView(),
+      mainContent:view==='dashboard'?this.buildDashboard():view==='projects'?this.buildProjectsView():view==='backlog'?this.buildBacklogView():view==='log'?this.buildLogView():view==='timeline'?this.buildTimelineView():view==='weekly'?this.buildWeeklyView():this.buildTeamView(),
       projectModal:this.buildProjectModal(),
     };
   }

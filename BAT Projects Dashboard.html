@@ -293,11 +293,13 @@ class Component extends DCLogic {
     const{e}=this,ps=this.getProjects();
     const active=ps.filter(p=>!['Completed','On Hold','Archived'].includes(p.status)).length;
     const own4=['Sweta','Jonny','Anil','Saurabh'];
-    const tAct=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].actual[1],0);
-    const tPlan=own4.reduce((s,o)=>s+this.OWNER_TOTALS[o].planned[1],0);
-    const util=Math.round(tAct/tPlan*100);
-    const behind=ps.filter(p=>p.planned4w[1]>0&&p.actual8w[6]<p.planned4w[1]*0.8).length;
-    const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:tAct,suf:'h',l:'Hours logged',n:'Jun 8–12 (team)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · Jun 8–12',c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
+    const w26act=o=>this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status)).reduce((s,p)=>s+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
+    const w26plan=o=>this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status)).reduce((s,p)=>s+(p.planned4w[3]||0),0);
+    const tAct=own4.reduce((s,o)=>s+w26act(o),0);
+    const tPlan=own4.reduce((s,o)=>s+w26plan(o),0);
+    const util=tPlan>0?Math.round(tAct/tPlan*100):0;
+    const behind=ps.filter(p=>p.planned4w[3]>0&&(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0)<p.planned4w[3]*0.8).length;
+    const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:tAct,suf:'h',l:'Hours logged',n:'Jun 26 (current week)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · Jun 26',c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
     return e('div',{style:{display:'flex',flexWrap:'wrap'}},
       ...kpis.map((k,i)=>e('div',{key:k.l,style:{flex:'1 1 140px',padding:'20px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
         e('div',{style:{fontSize:'clamp(32px,3.5vw,44px)',fontWeight:700,color:k.c||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},k.v+k.suf),
@@ -310,8 +312,10 @@ class Component extends DCLogic {
   buildTeamBars(){
     const{e}=this,MAX=48,{filterOwner}=this.state;
     const rows=this.DEFAULT_MEMBERS.map(o=>{
-      const d=this.OWNER_TOTALS[o],pl=d.planned[1],ac=d.actual[1];
-      const pto=this.getMemberPTO(o,'w_jun12');
+      const ownPs=this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status));
+      const ac=ownPs.reduce((s,p)=>s+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
+      const pl=ownPs.reduce((s,p)=>s+(p.planned4w[3]||0),0);
+      const pto=this.getMemberPTO(o,'w_jun26');
       const effCap=Math.max(0,40-pto);
       const r=pl>0?ac/pl:null,pct=r!==null?Math.round(r*100):null;
       const bc=r===null?'#c4cdd6':r>=0.95?this.GREEN:r>=0.75?this.BLUE:r>=0.5?this.AMBER:this.RED;
@@ -368,7 +372,8 @@ class Component extends DCLogic {
   }
 
   sparkline(p){
-    const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:0,fc:true}];
+    const w26ac=this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0;
+    const G=[{pl:p.planned4w[0],ac:p.actual8w[5]},{pl:p.planned4w[1],ac:p.actual8w[6]},{pl:p.planned4w[2],ac:p.actual8w[7]},{pl:p.planned4w[3],ac:w26ac,fc:w26ac===0}];
     const mx=Math.max(1,...G.map(g=>Math.max(g.pl,g.ac)));
     const W=72,H=22,bW=16,gap=2;
     const rects=G.flatMap((g,i)=>{

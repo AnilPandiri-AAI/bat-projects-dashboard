@@ -802,7 +802,7 @@ class Component extends DCLogic {
       e('div',{style:{background:'#fff',borderRadius:12,width:'100%',maxWidth:640,boxShadow:'0 24px 64px rgba(0,0,0,0.3)'}},
         e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'18px 24px',borderBottom:'1px solid #e4e9ef'}},
           e('h2',{style:{margin:0,fontSize:16,fontWeight:600,color:this.NAVY}},isEdit?'Edit project':'New project'),
-          e('button',{onClick:()=>this.setState({showProjectModal:false}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',fontFamily:'inherit'}},'×')
+          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]}}),style:{width:28,height:28,border:'1px solid #e4e9ef',borderRadius:6,background:'#f6f8fb',cursor:'pointer',fontSize:16,color:'#6b7d94',fontFamily:'inherit'}},'×')
         ),
         e('div',{style:{padding:'24px',maxHeight:'68vh',overflowY:'auto'}},
           e('div',{style:{marginBottom:24}},
@@ -828,7 +828,7 @@ class Component extends DCLogic {
           )
         ),
         e('div',{style:{display:'flex',justifyContent:'flex-end',gap:10,padding:'18px 24px',borderTop:'1px solid #e4e9ef'}},
-          e('button',{onClick:()=>this.setState({showProjectModal:false}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
+          e('button',{onClick:()=>this.setState({showProjectModal:false,projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]}}),style:{padding:'8px 18px',border:'1px solid #dde4eb',borderRadius:8,background:'#fff',fontSize:13,cursor:'pointer',color:'#6b7d94',fontFamily:'inherit'}},'Cancel'),
           e('button',{onClick:()=>{
             if(!projectForm.name.trim())return;
             if(isEdit){this.persist({projects:this.getProjects().map(p=>p.name===editProjectId?{...p,owner:projectForm.owner,type:projectForm.type,status:projectForm.status,currentPhase:projectForm.status,phases:projectForm.phases}:p),showProjectModal:false});}
@@ -891,10 +891,10 @@ class Component extends DCLogic {
             e('input',{type:'number',value:ptoVal,min:0,max:40,step:0.5,placeholder:'0',onChange:ev=>{
               const val=ev.target.value===''?null:parseFloat(ev.target.value)||0;
               const newPto={...this.state.ptoLog};
-              if(!newPto[logMember])newPto[logMember]={};
+              newPto[logMember]={...(newPto[logMember]||{})};
               if(val===null)delete newPto[logMember][logWeek];
               else newPto[logMember][logWeek]=val;
-              this.setState({ptoLog:newPto});
+              this.persist({ptoLog:newPto});
             },style:{width:80,...iS,border:'1px solid #f5d8a0',background:'#fff'}}),
             e('span',{style:{fontSize:13,color:'#9b7a3a'}},ptoVal>0?'h PTO · '+(40-ptoVal)+'h available this week':'hours off')
           )

@@ -1192,20 +1192,22 @@ class Component extends DCLogic {
     }).filter(p=>p.wkPlanned>0||p.wkActual>0)
       .sort((a,b)=>(b.wkActual||b.wkPlanned)-(a.wkActual||a.wkPlanned));
 
-    // Per-member summary
+    // Per-member summary — always use 40h capacity as planned baseline
+    const CAPACITY=40;
     const memData=members.map(m=>{
-      const{actual,planned}=this.getOwnerWeekData(m,weeklyViewWeek);
+      const{actual}=this.getOwnerWeekData(m,weeklyViewWeek);
       const pto=this.getMemberPTO(m,weeklyViewWeek);
-      const pct=planned>0?Math.round(actual/planned*100):null;
-      const bc=pct===null?'#c4cdd6':pct>=90?this.GREEN:pct>=70?this.BLUE:pct>=50?this.AMBER:this.RED;
+      const effCap=Math.max(CAPACITY-pto,0);
+      const pct=Math.round(actual/CAPACITY*100);
+      const bc=pct>=90?this.GREEN:pct>=70?this.BLUE:pct>=50?this.AMBER:actual>0?this.RED:'#c4cdd6';
       const mProjs=projData.filter(p=>p.owner===m);
-      return{m,actual,planned,pto,pct,bc,mProjs};
+      return{m,actual,planned:CAPACITY,pto,effCap,pct,bc,mProjs};
     });
 
     // Team totals
     const totAct=memData.reduce((s,d)=>s+d.actual,0);
-    const totPlan=memData.reduce((s,d)=>s+d.planned,0);
-    const totUtil=totPlan>0?Math.round(totAct/totPlan*100):0;
+    const totPlan=members.length*CAPACITY;
+    const totUtil=Math.round(totAct/totPlan*100);
     const prevTotAct=prevW?members.reduce((s,m)=>s+this.getOwnerWeekData(m,prevW.id).actual,0):null;
     const weekDelta=prevTotAct!==null?Math.round((totAct-prevTotAct)*10)/10:null;
     const behind=memData.filter(d=>d.pct!==null&&d.pct<80).length;
@@ -1235,11 +1237,11 @@ class Component extends DCLogic {
         ),
         e('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:4}},
           e('span',{style:{fontSize:24,fontWeight:700,color:d.bc,fontVariantNumeric:'tabular-nums',lineHeight:1}},d.actual+'h'),
-          d.pct!==null&&e('span',{style:{fontSize:13,fontWeight:600,color:d.bc,background:d.bc+'18',padding:'2px 8px',borderRadius:9999}},d.pct+'%')
+          e('span',{style:{fontSize:13,fontWeight:600,color:d.bc,background:d.bc+'18',padding:'2px 8px',borderRadius:9999}},d.pct+'%')
         ),
-        e('div',{style:{fontSize:11,color:this.GRAY,marginBottom:8}},d.planned>0?'Planned '+d.planned+'h'+(d.pto>0?' · '+d.pto+'h PTO':''):'No hours planned'),
+        e('div',{style:{fontSize:11,color:this.GRAY,marginBottom:8}},'Capacity: 40h'+(d.pto>0?' · '+d.pto+'h PTO · '+d.effCap+'h available':'')),
         e('div',{style:{position:'relative',height:6,background:'#e4e9ef',borderRadius:3,overflow:'hidden',marginBottom:d.mProjs.length>0?12:0}},
-          d.planned>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(d.planned/MAX_BAR*100,100)+'%',background:'#c4d8ec'}}),
+          e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:(CAPACITY/MAX_BAR*100)+'%',background:'#c4d8ec'}}),
           d.actual>0&&e('div',{style:{position:'absolute',top:0,left:0,height:'100%',width:Math.min(d.actual/MAX_BAR*100,115)+'%',background:d.bc,zIndex:1}})
         ),
         d.mProjs.length>0&&e('div',{style:{borderTop:'1px solid #f0f4f8',paddingTop:10,display:'flex',flexDirection:'column',gap:5}},

@@ -58,6 +58,7 @@ class Component extends DCLogic {
     view:'dashboard',
     filterType:'All',filterOwner:'All',expandedProject:null,
     timelineView:'monthly',timelineOffset:0,
+    dashWeek:'w_jun26',
     projectFilter:'active',
     showProjectModal:false,editProjectId:null,
     projectForm:{name:'',owner:'Sweta',type:'Transform',status:'Implementation',phases:[]},
@@ -207,6 +208,17 @@ class Component extends DCLogic {
   }
   estTotal(phases){return phases.reduce((s,ph)=>s+ph.hpw*(ph.endMonth-ph.startMonth+1)*4.33,0);}
   actTotal(p){return p.actual8w.reduce((s,v)=>s+v,0)+Object.values(this.state.weeklyLog[p.name]||{}).reduce((s,w)=>s+(w?.actual||0),0);}
+  getOwnerWeekData(owner,weekId){
+    const w=this.WEEKS.find(x=>x.id===weekId);
+    if(!w)return{actual:0,planned:0};
+    const ps=this.getProjects().filter(p=>p.owner===owner&&!['Completed','Archived'].includes(p.status));
+    let actual=0,planned=0;
+    ps.forEach(p=>{
+      if(w.current){actual+=this.state.weeklyLog[p.name]?.[weekId]?.actual||0;planned+=p.planned4w[3]||0;}
+      else{if(w.actualIdx!==null)actual+=p.actual8w[w.actualIdx]||0;if(w.plannedIdx!==null)planned+=p.planned4w[w.plannedIdx]||0;}
+    });
+    return{actual,planned};
+  }
   getMemberPTO(m,wid){return this.state.ptoLog[m]?.[wid]||0;}
   getBlockers(pname){return(this.state.projectComments[pname]||[]).filter(c=>c.isBlocker&&!c.resolved);}
   e(t,p,...c){return React.createElement(t,p,...c);}
@@ -277,6 +289,15 @@ class Component extends DCLogic {
           e('p',{style:{fontSize:14,color:'rgba(255,255,255,0.4)',margin:0,maxWidth:480,lineHeight:1.7,fontWeight:300}},'Actual vs. forecast, project phases, and team utilisation. Jun 23, 2026.')
         )
       ),
+      e('div',{style:{background:'#f0f4fa',borderBottom:'1px solid #e4e9ef',overflowX:'auto'}},
+        e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'10px 32px',display:'flex',gap:4,alignItems:'center',flexWrap:'nowrap',minWidth:'max-content'}},
+          e('span',{style:{fontSize:10,color:'#8899aa',fontWeight:600,letterSpacing:'0.08em',textTransform:'uppercase',marginRight:8,flexShrink:0}},'Week'),
+          ...this.WEEKS.map(w=>{
+            const sel=this.state.dashWeek===w.id;
+            return e('button',{key:w.id,onClick:()=>this.setState({dashWeek:w.id}),style:{padding:'5px 12px',borderRadius:6,fontSize:12,fontWeight:sel?600:400,cursor:'pointer',fontFamily:'inherit',whiteSpace:'nowrap',border:'1.5px solid '+(sel?this.BLUE:'#dde4eb'),background:sel?this.BLUE:w.current?'#e8f0ff':'#fff',color:sel?'#fff':w.current?this.BLUE:'#6b7d94'}},w.short);
+          })
+        )
+      ),
       e('div',{style:{background:'#fff',borderBottom:'1px solid #e4e9ef'}},
         e('div',{style:{maxWidth:1100,margin:'0 auto',padding:'0 32px'}},this.buildKPIs())
       ),
@@ -290,16 +311,15 @@ class Component extends DCLogic {
   }
 
   buildKPIs(){
-    const{e}=this,ps=this.getProjects();
+    const{e}=this,ps=this.getProjects(),{dashWeek}=this.state;
+    const selW=this.WEEKS.find(w=>w.id===dashWeek)||this.WEEKS[this.WEEKS.length-1];
     const active=ps.filter(p=>!['Completed','On Hold','Archived'].includes(p.status)).length;
     const own4=['Sweta','Jonny','Anil','Saurabh'];
-    const w26act=o=>this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status)).reduce((s,p)=>s+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
-    const w26plan=o=>this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status)).reduce((s,p)=>s+(p.planned4w[3]||0),0);
-    const tAct=own4.reduce((s,o)=>s+w26act(o),0);
-    const tPlan=own4.reduce((s,o)=>s+w26plan(o),0);
+    const tAct=own4.reduce((s,o)=>s+this.getOwnerWeekData(o,dashWeek).actual,0);
+    const tPlan=own4.reduce((s,o)=>s+this.getOwnerWeekData(o,dashWeek).planned,0);
     const util=tPlan>0?Math.round(tAct/tPlan*100):0;
-    const behind=ps.filter(p=>p.planned4w[3]>0&&(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0)<p.planned4w[3]*0.8).length;
-    const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:tAct,suf:'h',l:'Hours logged',n:'Jun 26 (current week)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · Jun 26',c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
+    const behind=ps.filter(p=>{const{actual,planned}=this.getOwnerWeekData(p.owner,dashWeek);return planned>0&&actual<planned*0.8&&ps.find(x=>x.name===p.name);}).length;
+    const kpis=[{v:active,suf:'',l:'Active projects',n:`of ${ps.length} total`},{v:Math.round(tAct*10)/10,suf:'h',l:'Hours logged',n:selW.short+' (team)'},{v:util,suf:'%',l:'Delivery rate',n:'vs plan · '+selW.short,c:util>=90?this.GREEN:util>=75?this.BLUE:this.AMBER},{v:behind,suf:'',l:'Behind plan',n:'projects under 80%',c:behind<=2?this.NAVY:this.RED}];
     return e('div',{style:{display:'flex',flexWrap:'wrap'}},
       ...kpis.map((k,i)=>e('div',{key:k.l,style:{flex:'1 1 140px',padding:'20px 24px',borderRight:i<3?'1px solid #e4e9ef':'none'}},
         e('div',{style:{fontSize:'clamp(32px,3.5vw,44px)',fontWeight:700,color:k.c||this.NAVY,lineHeight:1,letterSpacing:'-0.03em',fontVariantNumeric:'tabular-nums'}},k.v+k.suf),
@@ -310,12 +330,10 @@ class Component extends DCLogic {
   }
 
   buildTeamBars(){
-    const{e}=this,MAX=48,{filterOwner}=this.state;
+    const{e}=this,MAX=48,{filterOwner,dashWeek}=this.state;
     const rows=this.DEFAULT_MEMBERS.map(o=>{
-      const ownPs=this.getProjects().filter(p=>p.owner===o&&!['Completed','Archived'].includes(p.status));
-      const ac=ownPs.reduce((s,p)=>s+(this.state.weeklyLog[p.name]?.['w_jun26']?.actual||0),0);
-      const pl=ownPs.reduce((s,p)=>s+(p.planned4w[3]||0),0);
-      const pto=this.getMemberPTO(o,'w_jun26');
+      const{actual:ac,planned:pl}=this.getOwnerWeekData(o,dashWeek);
+      const pto=this.getMemberPTO(o,dashWeek);
       const effCap=Math.max(0,40-pto);
       const r=pl>0?ac/pl:null,pct=r!==null?Math.round(r*100):null;
       const bc=r===null?'#c4cdd6':r>=0.95?this.GREEN:r>=0.75?this.BLUE:r>=0.5?this.AMBER:this.RED;

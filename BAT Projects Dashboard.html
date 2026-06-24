@@ -20,7 +20,8 @@
 <div id="root"></div>
 <script>
 class DCLogic {
-  setState(patch) {
+  setState(patchOrFn) {
+    const patch = typeof patchOrFn === 'function' ? patchOrFn(this.state) : patchOrFn;
     Object.assign(this.state, patch);
     if (this._update) this._update();
   }
